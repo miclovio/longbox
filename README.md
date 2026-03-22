@@ -142,7 +142,7 @@ COMICS_PATH=H:/Comics,D:/MoreComics,E:/Manga
 ## License
 
 ISC
-
+Creative Commons
 ---
 
 &copy; 2026 [Outmaneuver](https://outmaneuver.cargo.site/)
