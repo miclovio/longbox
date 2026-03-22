@@ -23,23 +23,32 @@ A self-hosted comic book server with a Plex-style dark UI. Organize, read, and t
 
 ## Screenshots
 
+### Login
+![Login](screenshots/login.PNG)
+
 ### Home
-The home tab shows Continue Reading, Recently Added, Recently Released, and Trending rows with horizontal scroll navigation.
+![Home](screenshots/home.PNG)
 
 ### Library
-Full grid view of all series with adjustable thumbnail sizes, search, and sort options.
+![Library](screenshots/library.PNG)
 
 ### Series Detail
-Series header with Comic Vine metadata, description, and clickable creator links. Issues displayed as a grid with variant cover rotation on hover and read/unread status toggles.
+![Series Detail](screenshots/series.PNG)
 
 ### Comic Reader
-Full-screen reader with click zones, keyboard navigation, progress bar, bookmarks, fit modes, and settings panel.
+![Reader](screenshots/reader.PNG)
 
 ### Creator Page
-Plex actor-style layout with photo, bio, local series, and other works from Comic Vine.
+![Creator](screenshots/creator.PNG)
+
+### Reading Lists
+![Lists](screenshots/lists.PNG)
+
+### Profile
+![Profile](screenshots/profile.PNG)
 
 ### Admin Dashboard
-Stats, configuration, comics folder management, user management, and unmatched series overview.
+![Admin](screenshots/admin.PNG)
 
 ## Installation
 
