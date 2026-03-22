@@ -426,6 +426,10 @@
           <option value="issue_count-asc">Fewest Issues</option>
           <option value="created_at-desc">Recently Added</option>
         </select>
+        <div class="search-container search-inline">
+          <span class="search-icon">&#128269;</span>
+          <input type="text" id="searchInputInline" placeholder="Search..." autocomplete="off">
+        </div>
       </div>
       <div class="grid" id="grid"></div>
       <div class="empty-state" id="emptyState" style="display:none;">
@@ -530,7 +534,9 @@
 
     // ---- Library Tab ----
     function renderSeries() {
-      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const navSearch = document.getElementById('searchInput').value;
+      const inlineSearch = document.getElementById('searchInputInline') ? document.getElementById('searchInputInline').value : '';
+      const query = (navSearch || inlineSearch).toLowerCase().trim();
       const [sortBy, sortDir] = document.getElementById('sortSelect').value.split('-');
 
       let filtered = allSeries;
@@ -905,12 +911,16 @@
     document.getElementById('searchInput').addEventListener('input', debounce(() => {
       const query = document.getElementById('searchInput').value.trim();
       if (query) {
-        document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'library'));
-        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-        document.getElementById('tab-library').classList.add('active');
+        switchToTab('library');
       }
       renderSeries();
     }, 200));
+
+    // Inline search (mobile, inside library tab)
+    const inlineSearch = document.getElementById('searchInputInline');
+    if (inlineSearch) {
+      inlineSearch.addEventListener('input', debounce(() => renderSeries(), 200));
+    }
 
     document.getElementById('sortSelect').addEventListener('change', renderSeries);
 
