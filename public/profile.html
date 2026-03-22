@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Profile — Longbox</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .profile-header {
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      padding: 2rem;
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+    }
+
+    .profile-info h1 { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .profile-info .role {
+      font-size: 0.8rem;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .profile-info .joined {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+
+    .stats-row {
+      display: flex;
+      gap: 1.5rem;
+      margin-top: 0.75rem;
+    }
+
+    .stat-box {
+      text-align: center;
+    }
+
+    .stat-box .num {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .stat-box .label {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+      color: var(--text-primary);
+    }
+
+    .section { margin-bottom: 2rem; }
+
+    .empty-section {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      padding: 1rem;
+      text-align: center;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+    }
+
+    .logout-btn {
+      margin-top: 1rem;
+    }
+
+    .bookmark-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.75rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      margin-bottom: 0.5rem;
+      transition: background 0.2s;
+    }
+
+    .bookmark-item:hover { background: var(--bg-hover); }
+
+    .bookmark-item img {
+      width: 45px;
+      height: 68px;
+      object-fit: cover;
+      border-radius: 3px;
+      flex-shrink: 0;
+    }
+
+    .bookmark-item .bk-placeholder {
+      width: 45px;
+      height: 68px;
+      background: var(--bg-card);
+      border-radius: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+    }
+
+    .bookmark-item .bk-info { flex: 1; min-width: 0; }
+
+    .bookmark-item .bk-info h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .bookmark-item .bk-info .bk-meta {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      margin-top: 0.15rem;
+    }
+
+    .bookmark-item .bk-info .bk-note {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
+
+    .bookmark-item .bk-actions {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .bookmark-item .bk-actions .btn { font-size: 0.75rem; padding: 0.3rem 0.7rem; }
+
+    .bk-delete {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 0.2rem;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .bk-delete:hover { color: #e74c3c; background: rgba(231, 76, 60, 0.15); }
+
+    @media (max-width: 480px) {
+      .profile-header { flex-direction: column; text-align: center; }
+      .stats-row { justify-content: center; }
+      .bookmark-item { gap: 0.6rem; padding: 0.5rem; }
+      .bookmark-item img { width: 36px; height: 54px; }
+      .bookmark-item .bk-placeholder { width: 36px; height: 54px; font-size: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <a class="logo" href="/">Long<span>box</span></a>
+    <nav>
+      <a href="/">Library</a>
+      <a href="/lists.html">Lists</a>
+      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
+    </nav>
+    <div class="spacer"></div>
+    <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
+      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
+      <span id="profileName"></span>
+    </a>
+  </header>
+
+  <div class="main">
+    <div class="profile-header" id="profileHeader">
+      <div class="avatar" id="avatar"></div>
+      <div class="profile-info">
+        <h1 id="userName"></h1>
+        <div class="role" id="userRole"></div>
+        <div class="joined" id="userJoined"></div>
+        <div class="stats-row">
+          <div class="stat-box"><div class="num" id="statStarted">0</div><div class="label">Started</div></div>
+          <div class="stat-box"><div class="num" id="statCompleted">0</div><div class="label">Completed</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Continue Reading</div>
+      <div class="grid" id="continueGrid"></div>
+      <div class="empty-section" id="continueEmpty" style="display:none;">No issues in progress.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Bookmarks</div>
+      <div id="bookmarksList"></div>
+      <div class="empty-section" id="bookmarksEmpty" style="display:none;">No bookmarks yet. Use the star button in the reader to bookmark pages.</div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Recently Read</div>
+      <div class="grid" id="recentGrid"></div>
+      <div class="empty-section" id="recentEmpty" style="display:none;">No reading history yet. Start reading!</div>
+    </div>
+
+    <button class="btn btn-secondary logout-btn" onclick="logout()">Sign Out</button>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    async function loadProfile() {
+      const res = await fetch('/api/auth/me');
+      const user = await res.json();
+
+      if (!user.authenticated) {
+        window.location.href = '/login.html';
+        return;
+      }
+
+      document.getElementById('avatar').textContent = user.username.charAt(0).toUpperCase();
+      document.getElementById('userName').textContent = user.username;
+      document.getElementById('userRole').textContent = user.isAdmin ? 'Admin' : 'Member';
+
+      // Update navbar
+      if (user.isAdmin) document.getElementById('adminLink').style.display = '';
+      document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
+      document.getElementById('profileName').textContent = user.username;
+      document.getElementById('userJoined').textContent = 'Joined ' + new Date(user.createdAt).toLocaleDateString();
+      document.getElementById('statStarted').textContent = user.stats.issuesStarted;
+      document.getElementById('statCompleted').textContent = user.stats.issuesCompleted;
+
+      document.title = `${user.username} — Longbox`;
+
+      // Load reading progress and bookmarks
+      loadReadingProgress();
+      loadBookmarks();
+    }
+
+    async function loadReadingProgress() {
+      try {
+        const res = await fetch('/api/progress');
+        const progress = await res.json();
+
+        const inProgress = progress.filter(p => !p.is_read && p.current_page > 0);
+        const recent = progress.filter(p => p.is_read).slice(0, 12);
+
+        const continueGrid = document.getElementById('continueGrid');
+        const continueEmpty = document.getElementById('continueEmpty');
+
+        if (inProgress.length > 0) {
+          continueGrid.innerHTML = inProgress.map(p => issueCard(p)).join('');
+          continueGrid.style.display = 'grid';
+        } else {
+          continueEmpty.style.display = 'block';
+          continueGrid.style.display = 'none';
+        }
+
+        const recentGrid = document.getElementById('recentGrid');
+        const recentEmpty = document.getElementById('recentEmpty');
+
+        if (recent.length > 0) {
+          recentGrid.innerHTML = recent.map(p => issueCard(p)).join('');
+          recentGrid.style.display = 'grid';
+        } else {
+          recentEmpty.style.display = 'block';
+          recentGrid.style.display = 'none';
+        }
+      } catch (e) {
+        // Progress endpoint may not exist yet
+        document.getElementById('continueEmpty').style.display = 'block';
+        document.getElementById('recentEmpty').style.display = 'block';
+      }
+    }
+
+    async function loadBookmarks() {
+      const list = document.getElementById('bookmarksList');
+      const empty = document.getElementById('bookmarksEmpty');
+
+      try {
+        const res = await fetch('/api/bookmarks');
+        const bookmarks = await res.json();
+
+        if (bookmarks.length === 0) {
+          list.style.display = 'none';
+          empty.style.display = 'block';
+          return;
+        }
+
+        empty.style.display = 'none';
+        list.innerHTML = bookmarks.map(b => {
+          const thumb = b.thumbnail_path ? `/api/thumbnails/${b.thumbnail_path}` : '';
+          const coverHtml = thumb
+            ? `<img src="${esc(thumb)}" alt="${esc(b.issue_title)}">`
+            : `<div class="bk-placeholder">&#128214;</div>`;
+          return `
+            <div class="bookmark-item" data-bookmark-id="${b.id}">
+              ${coverHtml}
+              <div class="bk-info">
+                <h4>${esc(b.series_name)} - ${esc(b.issue_title)}</h4>
+                <div class="bk-meta">Page ${b.page_number + 1}</div>
+                ${b.note ? `<div class="bk-note">${esc(b.note)}</div>` : ''}
+              </div>
+              <div class="bk-actions">
+                <a href="/reader.html?id=${b.issue_id}&page=${b.page_number}" class="btn btn-primary">Jump to Page</a>
+                <button class="bk-delete" title="Remove bookmark" onclick="removeBookmark(${b.id})">&#10005;</button>
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (e) {
+        empty.style.display = 'block';
+        list.style.display = 'none';
+      }
+    }
+
+    async function removeBookmark(id) {
+      try {
+        await fetch(`/api/bookmarks/${id}`, { method: 'DELETE' });
+        loadBookmarks(); // reload
+      } catch (e) {
+        console.error('Failed to remove bookmark:', e);
+      }
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    }
+
+    loadProfile();
+  </script>
+<footer class="site-footer">
+  <div>&copy; 2026 <a href="https://outmaneuver.cargo.site/" target="_blank" rel="noopener">Outmaneuver</a></div>
+  <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Outmaneuver" data-color="#101010" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#ffffff" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+</footer>
+</body>
+</html>

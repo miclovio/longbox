@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Series — Longbox</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* ---- Add to List Button (corner tab, matches read-toggle style) ---- */
+    .add-to-list-btn {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 8px 0 0 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      opacity: 0;
+      transition: all 0.2s;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .card:hover .add-to-list-btn { opacity: 1; }
+
+    .add-to-list-btn:hover {
+      background: var(--accent);
+      color: white;
+    }
+
+    /* ---- List Popover (modern dropdown) ---- */
+    .list-popover {
+      position: fixed;
+      background: #1e1e1e;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 12px;
+      padding: 0.5rem;
+      min-width: 220px;
+      max-height: 300px;
+      overflow-y: auto;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.7);
+      z-index: 300;
+      display: none;
+      backdrop-filter: blur(12px);
+    }
+
+    .list-popover.visible { display: block; }
+
+    .list-popover .lp-title {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 0.5rem 0.6rem 0.3rem;
+    }
+
+    .list-popover .lp-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.5rem 0.6rem;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text-primary);
+      border-radius: 8px;
+      transition: background 0.15s;
+    }
+
+    .list-popover .lp-item:hover { background: rgba(255, 255, 255, 0.06); }
+
+    .list-popover .lp-item input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      position: relative;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }
+
+    .list-popover .lp-item input[type="checkbox"]:checked {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+
+    .list-popover .lp-item input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      left: 4px;
+      top: 1px;
+      width: 5px;
+      height: 9px;
+      border: solid white;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+
+    .list-popover .lp-item label {
+      cursor: pointer;
+      flex: 1;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <a class="logo" href="/" onclick="sessionStorage.setItem('active_tab','library');">Long<span>box</span></a>
+    <nav>
+      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="search-container">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="searchInput" placeholder="Search issues..." autocomplete="off">
+    </div>
+    <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
+      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
+      <span id="profileName"></span>
+    </a>
+  </header>
+
+  <!-- Status Bar -->
+  <div class="status-bar" id="statusBar"></div>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Series Header -->
+    <div class="series-header" id="seriesHeader" style="display:none;">
+      <div class="cover" id="seriesCover"></div>
+      <div class="details">
+        <h1 id="seriesName"></h1>
+        <div class="meta-row" id="seriesMeta"></div>
+        <div class="description" id="seriesDesc"></div>
+        <div class="actions">
+          <button class="btn btn-primary" id="btnMatchCV" style="display:none;">Match Comic Vine</button>
+          <button class="btn btn-secondary" id="btnReadFirst">Read First Issue</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Issues Grid -->
+    <div class="toolbar">
+      <h2 id="issuesTitle">Issues</h2>
+      <select id="sortSelect">
+        <option value="number-asc">Issue # Asc</option>
+        <option value="number-desc">Issue # Desc</option>
+        <option value="name-asc">Name A-Z</option>
+        <option value="date-desc">Release Date</option>
+      </select>
+    </div>
+    <div class="grid" id="grid"></div>
+  </div>
+
+  <!-- Comic Vine Match Modal -->
+  <div class="modal-overlay" id="cvModal">
+    <div class="modal">
+      <h3>Match to Comic Vine</h3>
+      <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
+        <input type="text" id="cvSearchInput" placeholder="Search Comic Vine..." style="flex:1;padding:0.6rem 1rem;border:none;border-radius:24px;background:rgba(255,255,255,0.08);color:var(--text-primary);font-size:0.9rem;outline:none;">
+        <button class="btn btn-primary" id="cvSearchBtn">Search</button>
+      </div>
+      <div id="cvResults"></div>
+      <div style="margin-top:1rem;text-align:right;">
+        <button class="btn btn-secondary" id="cvCloseBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- List Popover -->
+  <div class="list-popover" id="listPopover"></div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let series = null;
+    let issues = [];
+    const seriesId = getParam('id');
+    let _userLists = null;
+    let _listMembership = {}; // { issueId: Set of listIds }
+
+    async function loadSeries() {
+      const res = await fetch(`/api/series/${seriesId}`);
+      if (!res.ok) { window.location.href = '/'; return; }
+      const data = await res.json();
+      series = data;
+      issues = data.issues || [];
+
+      document.title = `${series.name} — Longbox`;
+
+      // Header
+      const header = document.getElementById('seriesHeader');
+      header.style.display = 'flex';
+
+      const cover = document.getElementById('seriesCover');
+      const thumb = thumbUrl(series.thumbnail_path);
+      cover.innerHTML = thumb
+        ? `<img src="${thumb}" alt="${esc(series.name)}">`
+        : `<div class="card-placeholder" style="aspect-ratio:2/3;">&#128218;</div>`;
+
+      document.getElementById('seriesName').textContent = series.name;
+
+      const meta = document.getElementById('seriesMeta');
+      const parts = [];
+      if (series.publisher) parts.push(`<span class="meta-item"><strong>${esc(series.publisher)}</strong></span>`);
+      if (series.start_year) parts.push(`<span class="meta-item">${esc(series.start_year)}</span>`);
+      const variantCount = series.issue_count - issues.length;
+      parts.push(`<span class="meta-item">${issues.length} issues${variantCount > 0 ? ' (' + variantCount + ' variants)' : ''}</span>`);
+      meta.innerHTML = parts.join('');
+
+      const desc = document.getElementById('seriesDesc');
+      const toggle = document.getElementById('descToggle');
+      if (series.description) {
+        // Strip "Collected Editions" and everything after it
+        // Strip images, then cut everything from the first <h4> that isn't about the story/creators
+        const cleaned = series.description
+          .replace(/<img[^>]*>/gi, '')
+          .replace(/<figure[^>]*>[\s\S]*?<\/figure>/gi, '')
+          .replace(/<h[2-4][^>]*>[^<]*<\/h[2-4]>[\s\S]*$/i, '')
+          .trim();
+        desc.innerHTML = cleaned;
+        // Rewrite Comic Vine links in the description
+        rewriteComicVineLinks(desc);
+      } else {
+        desc.textContent = '';
+      }
+
+      // Show Match CV button (will be admin-only once auth is added)
+      const matchBtn = document.getElementById('btnMatchCV');
+      matchBtn.style.display = 'inline-flex';
+
+      // If no Comic Vine match yet, auto-match in background
+      if (!series.comicvine_id) {
+        autoMatchComicVine();
+      }
+
+      // Read first button
+      document.getElementById('btnReadFirst').onclick = () => {
+        if (issues.length > 0) window.location.href = `/reader.html?id=${issues[0].id}`;
+      };
+
+      renderIssues();
+    }
+
+    function renderIssues() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const sortVal = document.getElementById('sortSelect').value;
+
+      let filtered = issues;
+      if (query) {
+        filtered = filtered.filter(i =>
+          i.title.toLowerCase().includes(query) ||
+          (i.issue_number != null && String(i.issue_number).includes(query))
+        );
+      }
+
+      filtered = [...filtered];
+      switch (sortVal) {
+        case 'number-asc':
+          filtered.sort((a, b) => (a.issue_number ?? 9999) - (b.issue_number ?? 9999));
+          break;
+        case 'number-desc':
+          filtered.sort((a, b) => (b.issue_number ?? -1) - (a.issue_number ?? -1));
+          break;
+        case 'name-asc':
+          filtered.sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true }));
+          break;
+        case 'date-desc':
+          filtered.sort((a, b) => (b.cover_date || '').localeCompare(a.cover_date || ''));
+          break;
+      }
+
+      document.getElementById('issuesTitle').textContent = `Issues (${filtered.length})`;
+      document.getElementById('grid').innerHTML = filtered.map(issueCard).join('');
+      initVariantRotation();
+    }
+
+    // -- Comic Vine Match --
+    const cvModal = document.getElementById('cvModal');
+
+    document.getElementById('btnMatchCV').onclick = () => {
+      cvModal.classList.add('visible');
+      document.getElementById('cvSearchInput').value = series.name;
+      searchComicVine();
+    };
+
+    document.getElementById('cvCloseBtn').onclick = () => cvModal.classList.remove('visible');
+    cvModal.addEventListener('click', (e) => { if (e.target === cvModal) cvModal.classList.remove('visible'); });
+
+    document.getElementById('cvSearchBtn').onclick = searchComicVine;
+    document.getElementById('cvSearchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') searchComicVine();
+    });
+
+    async function searchComicVine() {
+      const q = document.getElementById('cvSearchInput').value.trim();
+      if (!q) return;
+      const results = document.getElementById('cvResults');
+      results.innerHTML = '<div style="text-align:center;padding:1rem;"><div class="spinner"></div></div>';
+
+      try {
+        const res = await fetch(`/api/comicvine/search?q=${encodeURIComponent(q)}`);
+        const data = await res.json();
+
+        if (data.error) {
+          results.innerHTML = `<p style="color:var(--accent);padding:0.5rem;">${esc(data.error)}</p>`;
+          return;
+        }
+
+        if (data.length === 0) {
+          results.innerHTML = '<p style="color:var(--text-muted);padding:0.5rem;">No results found.</p>';
+          return;
+        }
+
+        results.innerHTML = data.map(v => `
+          <div class="candidate" data-id="${v.comicvine_id}">
+            ${v.image_url ? `<img src="${esc(v.image_url)}" alt="">` : '<div style="width:50px;height:75px;background:var(--bg-card);border-radius:4px;"></div>'}
+            <div class="info">
+              <h4>${esc(v.name)}</h4>
+              <p>${esc(v.publisher || 'Unknown')} &middot; ${esc(v.start_year || '')} &middot; ${v.issue_count || 0} issues</p>
+            </div>
+          </div>
+        `).join('');
+
+        results.querySelectorAll('.candidate').forEach(el => {
+          el.addEventListener('click', () => matchToVolume(el.dataset.id));
+        });
+      } catch (err) {
+        results.innerHTML = `<p style="color:var(--accent);">Error: ${esc(err.message)}</p>`;
+      }
+    }
+
+    async function matchToVolume(cvId) {
+      const results = document.getElementById('cvResults');
+      results.innerHTML = '<div style="text-align:center;padding:1rem;"><div class="spinner"></div> Matching issues...</div>';
+
+      try {
+        const res = await fetch(`/api/comicvine/match/${seriesId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ comicvine_volume_id: parseInt(cvId) }),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          results.innerHTML = `<p style="color:var(--accent);">${esc(data.error)}</p>`;
+          return;
+        }
+
+        cvModal.classList.remove('visible');
+        loadSeries(); // Reload with new metadata
+      } catch (err) {
+        results.innerHTML = `<p style="color:var(--accent);">Error: ${esc(err.message)}</p>`;
+      }
+    }
+
+    async function autoMatchComicVine() {
+      try {
+        const res = await fetch(`/api/comicvine/auto-match/${seriesId}?auto=true`, { method: 'POST' });
+        const data = await res.json();
+        if (data.matched) {
+          loadSeries(); // Reload with new metadata
+        }
+      } catch (err) {
+        // Silent fail — auto-match is best-effort
+        console.log('Auto-match failed:', err.message);
+      }
+    }
+
+    // -- Mark as Read / Unread toggle --
+    document.getElementById('grid').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.read-toggle');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const issueId = btn.dataset.issueId;
+      const currentlyRead = btn.dataset.isRead === '1';
+      const newState = !currentlyRead;
+
+      btn.disabled = true;
+      try {
+        await fetch(`/api/progress/${issueId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ is_read: newState }),
+        });
+
+        // Update local progress data
+        if (!_progressData) _progressData = { issues: {}, series: {} };
+        if (!_progressData.issues[issueId]) {
+          _progressData.issues[issueId] = { currentPage: 0, isRead: false };
+        }
+        _progressData.issues[issueId].isRead = newState;
+
+        // Re-render the grid to update badges
+        renderIssues();
+      } catch (err) {
+        console.error('Failed to toggle read status:', err);
+      }
+      btn.disabled = false;
+    });
+
+    document.getElementById('searchInput').addEventListener('input', debounce(renderIssues, 200));
+    document.getElementById('sortSelect').addEventListener('change', renderIssues);
+
+    window.addEventListener('beforeunload', () => {
+      sessionStorage.setItem('series_scroll_' + seriesId, window.scrollY);
+    });
+
+    // ---- Add to List ----
+    async function loadUserLists() {
+      try {
+        const res = await fetch('/api/lists');
+        _userLists = await res.json();
+      } catch (e) {
+        _userLists = [];
+      }
+    }
+
+    // After rendering issues, inject the add-to-list buttons
+    const _origRenderIssues = renderIssues;
+    renderIssues = function() {
+      _origRenderIssues();
+      // Add "+" button to each issue card
+      document.querySelectorAll('.card[data-primary-id]').forEach(card => {
+        const issueId = card.dataset.primaryId;
+        // Don't add if already present
+        if (card.querySelector('.add-to-list-btn')) return;
+        const btn = document.createElement('button');
+        btn.className = 'add-to-list-btn';
+        btn.innerHTML = '+';
+        btn.title = 'Add to list';
+        btn.dataset.issueId = issueId;
+        card.appendChild(btn);
+      });
+    };
+
+    // Handle add-to-list button click via delegation
+    document.getElementById('grid').addEventListener('click', async (e) => {
+      const btn = e.target.closest('.add-to-list-btn');
+      if (!btn) return;
+      e.preventDefault();
+      e.stopPropagation();
+
+      const issueId = parseInt(btn.dataset.issueId);
+      await showListPopover(btn, issueId);
+    });
+
+    async function showListPopover(anchor, issueId) {
+      if (!_userLists) await loadUserLists();
+
+      // Load which lists contain this issue
+      const membership = new Set();
+      for (const list of _userLists) {
+        try {
+          const res = await fetch(`/api/lists/${list.id}`);
+          const data = await res.json();
+          if (data.items && data.items.some(i => i.issue_id === issueId)) {
+            membership.add(list.id);
+          }
+        } catch (e) {}
+      }
+
+      const popover = document.getElementById('listPopover');
+      popover.innerHTML = `
+        <div class="lp-title">Add to List</div>
+        ${_userLists.map(l => `
+          <div class="lp-item">
+            <input type="checkbox" id="lp-cb-${l.id}" data-list-id="${l.id}" ${membership.has(l.id) ? 'checked' : ''}>
+            <label for="lp-cb-${l.id}">${esc(l.name)}</label>
+          </div>
+        `).join('')}
+      `;
+
+      // Position popover near anchor
+      const rect = anchor.getBoundingClientRect();
+      popover.style.top = (rect.bottom + 4) + 'px';
+      popover.style.left = Math.min(rect.left, window.innerWidth - 220) + 'px';
+      popover.classList.add('visible');
+
+      // Handle checkbox changes
+      popover.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', async () => {
+          const listId = parseInt(cb.dataset.listId);
+          if (cb.checked) {
+            await fetch(`/api/lists/${listId}/items`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ issue_id: issueId }),
+            });
+          } else {
+            await fetch(`/api/lists/${listId}/items/${issueId}`, { method: 'DELETE' });
+          }
+        });
+      });
+
+      // Close on outside click
+      const closeHandler = (e) => {
+        if (!popover.contains(e.target) && e.target !== anchor) {
+          popover.classList.remove('visible');
+          document.removeEventListener('click', closeHandler);
+        }
+      };
+      setTimeout(() => document.addEventListener('click', closeHandler), 0);
+    }
+
+    function rewriteComicVineLinks(container) {
+      const links = container.querySelectorAll('a[href]');
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        // Person links: /name-slug/4040-12345/ -> /creator.html?id=12345&name=Name
+        const personMatch = href.match(/\/4040-(\d+)\/?$/);
+        if (personMatch) {
+          const personId = personMatch[1];
+          const name = link.textContent.trim();
+          link.setAttribute('href', `/creator.html?id=${personId}&name=${encodeURIComponent(name)}`);
+          link.removeAttribute('target');
+          return;
+        }
+
+        // Volume links: /name-slug/4050-12345/ -> check local library
+        const volumeMatch = href.match(/\/4050-(\d+)\/?$/);
+        if (volumeMatch) {
+          const cvId = volumeMatch[1];
+          // Check if we have this volume locally (async, update link when found)
+          fetch('/api/series').then(r => r.json()).then(allSeries => {
+            const local = allSeries.find(s => String(s.comicvine_id) === cvId);
+            if (local) {
+              link.setAttribute('href', `/series.html?id=${local.id}`);
+            } else {
+              link.setAttribute('href', `https://comicvine.gamespot.com${href}`);
+              link.setAttribute('target', '_blank');
+              link.setAttribute('rel', 'noopener');
+            }
+          }).catch(() => {
+            link.setAttribute('href', `https://comicvine.gamespot.com${href}`);
+            link.setAttribute('target', '_blank');
+          });
+          return;
+        }
+
+        // Any other relative Comic Vine link — make it absolute
+        if (href.startsWith('/') && !href.startsWith('//')) {
+          link.setAttribute('href', `https://comicvine.gamespot.com${href}`);
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener');
+        }
+      });
+    }
+
+    async function start() {
+      await loadProgressData();
+      await loadUserLists();
+      await loadSeries();
+      const saved = sessionStorage.getItem('series_scroll_' + seriesId);
+      if (saved) {
+        requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));
+      }
+    }
+
+    // Load current user for navbar
+    fetch('/api/auth/me').then(r => r.json()).then(user => {
+      if (user.authenticated) {
+        if (user.isAdmin) document.getElementById('adminLink').style.display = '';
+        document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
+        document.getElementById('profileName').textContent = user.username;
+      }
+    }).catch(() => {});
+
+    start();
+  </script>
+<footer class="site-footer">
+  <div>&copy; 2026 <a href="https://outmaneuver.cargo.site/" target="_blank" rel="noopener">Outmaneuver</a></div>
+  <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Outmaneuver" data-color="#101010" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#ffffff" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+</footer>
+</body>
+</html>

@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Longbox</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1.25rem;
+      margin-top: 1.5rem;
+    }
+    .admin-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    .admin-card h3 {
+      font-size: 1rem;
+      margin-bottom: 0.75rem;
+      color: var(--accent);
+    }
+    .stat { font-size: 2rem; font-weight: 700; }
+    .stat-label { font-size: 0.8rem; color: var(--text-muted); }
+    .admin-card .actions { margin-top: 1rem; display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .config-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.4rem 0;
+      font-size: 0.82rem;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .config-row:last-child { border: none; }
+    .config-row .label { color: var(--text-muted); }
+    .config-row .value { color: var(--text-primary); text-align: right; }
+    .config-row .value.ok { color: #27ae60; }
+    .config-row .value.warn { color: var(--accent); }
+    .config-row .value.err { color: #e74c3c; }
+
+    .user-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    .user-table th, .user-table td {
+      text-align: left;
+      padding: 0.5rem 0.75rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .user-table th {
+      color: var(--text-muted);
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .role-badge {
+      display: inline-block;
+      padding: 0.15rem 0.5rem;
+      border-radius: 10px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .role-badge.admin { background: var(--accent); color: white; }
+    .role-badge.member { background: rgba(255,255,255,0.08); color: var(--text-muted); }
+    .role-badge:hover { opacity: 0.8; }
+    .btn-sm {
+      background: transparent;
+      border: 1px solid;
+      padding: 0.2rem 0.6rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      transition: all 0.15s;
+    }
+    .btn-sm.delete { border-color: #e74c3c; color: #e74c3c; }
+    .btn-sm.delete:hover { background: #e74c3c; color: white; }
+
+    .log {
+      background: var(--bg-input);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 0.75rem;
+      font-family: monospace;
+      font-size: 0.72rem;
+      color: var(--text-secondary);
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 0.75rem;
+      white-space: pre-wrap;
+    }
+
+    .full-width { grid-column: 1 / -1; }
+
+    .create-user-form {
+      display: flex;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+    .create-user-form input {
+      padding: 0.45rem 0.75rem;
+      border: none;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text-primary);
+      font-size: 0.82rem;
+      outline: none;
+      flex: 1;
+      min-width: 100px;
+    }
+    .create-user-form input:focus { box-shadow: 0 0 0 2px var(--accent); }
+
+    .unmatched-list {
+      font-size: 0.82rem;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 0.5rem;
+    }
+    .unmatched-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem 0.75rem;
+      background: rgba(255,255,255,0.03);
+      border-radius: var(--radius);
+    }
+    .unmatched-item:hover { background: rgba(255,255,255,0.06); }
+
+    @media (max-width: 768px) {
+      .admin-grid { grid-template-columns: 1fr !important; }
+      .unmatched-list { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <a class="logo" href="/">Long<span>box</span></a>
+    <nav>
+      <a href="/admin.html" class="active">Admin</a>
+    </nav>
+    <div class="spacer"></div>
+    <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
+      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
+      <span id="profileName"></span>
+    </a>
+  </header>
+
+  <div class="main">
+    <div class="toolbar">
+      <h2>Admin Dashboard</h2>
+      <button class="btn btn-primary" id="scanBtn" onclick="triggerScan()">Scan Library</button>
+      <button class="btn btn-primary" style="background:#cc3333;" onclick="shutdownServer()">Kill Server</button>
+    </div>
+    <div class="log" id="scanLog" style="display:none;margin-bottom:1.25rem;"></div>
+
+    <!-- Row 1: Stats + Folders + Config -->
+    <div class="admin-grid" style="grid-template-columns:1fr 1fr 1fr;">
+      <div class="admin-card">
+        <h3>Library Stats</h3>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+          <div><div class="stat" id="statSeries">-</div><div class="stat-label">Series</div></div>
+          <div><div class="stat" id="statIssues">-</div><div class="stat-label">Issues</div></div>
+          <div><div class="stat" id="statUsers">-</div><div class="stat-label">Users</div></div>
+          <div><div class="stat" id="statStorage">-</div><div class="stat-label">Storage</div></div>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <h3>Comics Folders</h3>
+        <div id="pathsList">Loading...</div>
+        <div class="create-user-form" style="margin-top:0.75rem;">
+          <input type="text" id="newPathInput" placeholder="Add folder path..." style="flex:2;">
+          <button class="btn btn-primary" onclick="addPath()">Add</button>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <h3>Configuration</h3>
+        <div class="config-row"><span class="label">Port</span><span class="value" id="cfgPort">-</span></div>
+        <div class="config-row"><span class="label">Comic Vine API</span><span class="value" id="cfgCV">-</span></div>
+        <div class="config-row"><span class="label">CV Matched</span><span class="value" id="cfgMatched">-</span></div>
+        <div class="config-row"><span class="label">Thumbnails</span><span class="value" id="cfgThumbs">-</span></div>
+        <div class="config-row"><span class="label">OPDS Feed</span><span class="value ok" id="cfgOpds" style="font-family:monospace;font-size:0.75rem;user-select:all;cursor:text;"></span></div>
+      </div>
+    </div>
+
+    <!-- Row 3: User Management full width -->
+    <div style="margin-top:1.25rem;">
+      <div class="admin-card">
+        <h3>User Management</h3>
+        <div id="usersContainer">Loading...</div>
+        <div class="create-user-form">
+          <input type="text" id="newUsername" placeholder="Username" autocomplete="off">
+          <input type="password" id="newPassword" placeholder="Password" autocomplete="new-password">
+          <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:var(--text-secondary);cursor:pointer;">
+            <input type="checkbox" id="newIsAdmin" style="accent-color:var(--accent);"> Admin
+          </label>
+          <button class="btn btn-primary" onclick="createUser()">Add User</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Row 3: Unmatched Series full width, no scroll -->
+    <div class="admin-card" style="margin-top:1.25rem;">
+      <h3>Unmatched Series <span id="unmatchedCount" style="color:var(--text-muted);font-weight:400;font-size:0.85rem;"></span></h3>
+      <div id="unmatchedList">Loading...</div>
+    </div>
+  </div>
+
+  <script>
+    function formatBytes(bytes) {
+      if (!bytes) return '0 B';
+      if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+      if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+      return (bytes / (1024 * 1024 * 1024)).toFixed(2) + ' GB';
+    }
+
+    async function loadStats() {
+      const res = await fetch('/api/admin/stats');
+      const s = await res.json();
+
+      document.getElementById('statSeries').textContent = s.series;
+      document.getElementById('statIssues').textContent = s.issues;
+      document.getElementById('statUsers').textContent = s.users;
+      document.getElementById('statStorage').textContent = formatBytes(s.totalFileSize);
+
+      document.getElementById('cfgPort').textContent = s.port;
+      document.getElementById('cfgPort').className = 'value';
+      document.getElementById('cfgCV').textContent = s.comicVineKey;
+      document.getElementById('cfgCV').className = 'value' + (s.comicVineKey === 'Configured' ? ' ok' : ' warn');
+      document.getElementById('cfgMatched').textContent = s.matched + ' / ' + s.series;
+      document.getElementById('cfgMatched').className = 'value' + (s.matched === s.series ? ' ok' : '');
+      document.getElementById('cfgThumbs').textContent = s.issuesWithThumbs + ' / ' + s.issues;
+      document.getElementById('cfgThumbs').className = 'value' + (s.issuesWithThumbs === s.issues ? ' ok' : '');
+      document.getElementById('cfgOpds').textContent = location.origin + '/opds';
+    }
+
+    async function loadUnmatched() {
+      const res = await fetch('/api/admin/unmatched');
+      const list = await res.json();
+      const el = document.getElementById('unmatchedList');
+      document.getElementById('unmatchedCount').textContent = `(${list.length})`;
+
+      if (list.length === 0) {
+        el.innerHTML = '<p style="color:#27ae60;font-size:0.82rem;">All series matched!</p>';
+        return;
+      }
+
+      el.innerHTML = list.map(s => `
+        <div class="unmatched-item">
+          <span>${s.name} <span style="color:var(--text-muted);">(${s.issue_count})</span></span>
+          <a href="/series.html?id=${s.id}" class="btn-sm" style="border-color:var(--accent);color:var(--accent);">Match</a>
+        </div>
+      `).join('');
+    }
+
+    async function triggerScan() {
+      const btn = document.getElementById('scanBtn');
+      const log = document.getElementById('scanLog');
+      btn.disabled = true;
+      btn.textContent = 'Scanning...';
+      log.style.display = 'block';
+      log.textContent = 'Starting library scan...\n';
+
+      try {
+        await fetch('/api/admin/scan', { method: 'POST' });
+        const poll = setInterval(async () => {
+          const res = await fetch('/api/admin/scan/status');
+          const data = await res.json();
+          if (!data.scanning) {
+            clearInterval(poll);
+            btn.disabled = false;
+            btn.textContent = 'Scan Library';
+            if (data.lastResult && !data.lastResult.error) {
+              const r = data.lastResult;
+              log.textContent += `\nScan complete!\nSeries: +${r.seriesAdded}  Issues: +${r.issuesAdded}  Updated: ${r.issuesUpdated}\n`;
+              if (r.errors?.length > 0) {
+                log.textContent += `Errors: ${r.errors.length}\n`;
+                r.errors.slice(0, 10).forEach(e => log.textContent += `  - ${e.error}\n`);
+              }
+            } else if (data.lastResult?.error) {
+              log.textContent += `Error: ${data.lastResult.error}\n`;
+            }
+            loadStats();
+            loadUnmatched();
+          } else {
+            log.textContent += '.';
+          }
+          log.scrollTop = log.scrollHeight;
+        }, 2000);
+      } catch (err) {
+        btn.disabled = false;
+        btn.textContent = 'Scan Library';
+        log.textContent += `Error: ${err.message}\n`;
+      }
+    }
+
+    async function shutdownServer() {
+      if (!confirm('Kill the server?')) return;
+      try { await fetch('/api/admin/shutdown', { method: 'POST' }); } catch {}
+      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:var(--accent);font-size:1.5rem;">Server stopped.</div>';
+    }
+
+    async function loadUsers() {
+      const container = document.getElementById('usersContainer');
+      try {
+        const res = await fetch('/api/admin/users');
+        const users = await res.json();
+        if (users.length === 0) {
+          container.innerHTML = '<p style="color:var(--text-muted);font-size:0.85rem;">No users.</p>';
+          return;
+        }
+        container.innerHTML = `
+          <table class="user-table">
+            <thead><tr><th>Username</th><th>Role</th><th>Joined</th><th></th></tr></thead>
+            <tbody>
+              ${users.map(u => `<tr>
+                <td>${u.username}</td>
+                <td><span class="role-badge ${u.isAdmin ? 'admin' : 'member'}" onclick="toggleAdmin(${u.id})" title="Click to toggle">${u.isAdmin ? 'Admin' : 'Member'}</span></td>
+                <td style="color:var(--text-muted);">${new Date(u.createdAt).toLocaleDateString()}</td>
+                <td>${u.isAdmin ? '' : `<button class="btn-sm delete" onclick="deleteUser(${u.id}, '${u.username}')">Delete</button>`}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>`;
+      } catch (err) {
+        container.innerHTML = `<p style="color:#e74c3c;">Failed to load users</p>`;
+      }
+    }
+
+    async function toggleAdmin(id) {
+      await fetch(`/api/admin/users/${id}/toggle-admin`, { method: 'PUT' });
+      loadUsers();
+    }
+
+    async function deleteUser(id, username) {
+      if (!confirm(`Delete user "${username}"? Their reading progress will be removed.`)) return;
+      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+      if (res.ok) loadUsers();
+      else alert((await res.json()).error);
+    }
+
+    async function createUser() {
+      const username = document.getElementById('newUsername').value.trim();
+      const password = document.getElementById('newPassword').value;
+      const isAdmin = document.getElementById('newIsAdmin').checked;
+
+      if (!username || !password) return alert('Username and password required');
+
+      const res = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password, isAdmin }),
+      });
+
+      if (res.ok) {
+        document.getElementById('newUsername').value = '';
+        document.getElementById('newPassword').value = '';
+        document.getElementById('newIsAdmin').checked = false;
+        loadUsers();
+        loadStats();
+      } else {
+        alert((await res.json()).error);
+      }
+    }
+
+    // Load navbar user
+    fetch('/api/auth/me').then(r => r.json()).then(user => {
+      if (user.authenticated) {
+        document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
+        document.getElementById('profileName').textContent = user.username;
+      }
+    }).catch(() => {});
+
+    async function loadPaths() {
+      const res = await fetch('/api/admin/paths');
+      const paths = await res.json();
+      const el = document.getElementById('pathsList');
+
+      if (paths.length === 0) {
+        el.innerHTML = '<p style="color:var(--text-muted);font-size:0.82rem;">No folders configured.</p>';
+        return;
+      }
+
+      el.innerHTML = paths.map(p => `
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.4rem 0.5rem;background:rgba(255,255,255,0.03);border-radius:var(--radius);margin-bottom:0.35rem;">
+          <span style="font-size:0.82rem;color:var(--text-primary);font-family:monospace;">${p}</span>
+          <button class="btn-sm delete" onclick="removePath('${p.replace(/'/g, "\\'")}')" ${paths.length <= 1 ? 'disabled title="Cannot remove the only path"' : ''}>Remove</button>
+        </div>
+      `).join('');
+    }
+
+    async function addPath() {
+      const input = document.getElementById('newPathInput');
+      const newPath = input.value.trim();
+      if (!newPath) return;
+
+      const res = await fetch('/api/admin/paths', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: newPath }),
+      });
+
+      if (res.ok) {
+        input.value = '';
+        loadPaths();
+      } else {
+        alert((await res.json()).error);
+      }
+    }
+
+    async function removePath(p) {
+      if (!confirm(`Remove folder "${p}"? Existing scanned data will remain until next scan cleanup.`)) return;
+      const res = await fetch('/api/admin/paths', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: p }),
+      });
+      if (res.ok) loadPaths();
+      else alert((await res.json()).error);
+    }
+
+    loadStats();
+    loadUsers();
+    loadUnmatched();
+    loadPaths();
+
+    // Refresh data when returning to the page
+    window.addEventListener('focus', () => {
+      loadStats();
+      loadUnmatched();
+    });
+  </script>
+<footer class="site-footer">
+  <div>&copy; 2026 <a href="https://outmaneuver.cargo.site/" target="_blank" rel="noopener">Outmaneuver</a></div>
+  <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Outmaneuver" data-color="#101010" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#ffffff" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+</footer>
+</body>
+</html>

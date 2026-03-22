@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Longbox</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* ---- Tabs ---- */
+    .page-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .page-tab {
+      padding: 0.7rem 1.2rem;
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      border: none;
+      background: none;
+      font-family: inherit;
+      position: relative;
+      transition: color 0.2s;
+    }
+
+    .page-tab:hover { color: var(--text-primary); }
+
+    .page-tab.active {
+      color: var(--accent);
+    }
+
+    .page-tab.active::after {
+      content: '';
+      position: absolute;
+      bottom: -1px;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px 2px 0 0;
+    }
+
+    /* ---- Tab Content ---- */
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* ---- Horizontal Scroll Row ---- */
+    .scroll-section {
+      margin-bottom: 2rem;
+    }
+
+    .scroll-section .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .scroll-section h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .scroll-nav {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .scroll-nav button {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .scroll-nav button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+    }
+
+    .scroll-nav button:disabled {
+      opacity: 0.2;
+      cursor: default;
+    }
+
+    .scroll-row-wrap {
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Fade edges */
+    .scroll-row-wrap::before,
+    .scroll-row-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 40px;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .scroll-row-wrap::before {
+      left: 0;
+      background: linear-gradient(to right, var(--bg-primary), transparent);
+    }
+
+    .scroll-row-wrap::after {
+      right: 0;
+      background: linear-gradient(to left, var(--bg-primary), transparent);
+    }
+
+    .scroll-row-wrap.can-scroll-left::before { opacity: 1; }
+    .scroll-row-wrap.can-scroll-right::after { opacity: 1; }
+
+    .scroll-row {
+      display: flex;
+      gap: 0.75rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .scroll-row::-webkit-scrollbar { display: none; }
+
+    .scroll-card {
+      flex-shrink: 0;
+      width: 150px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .scroll-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px var(--shadow);
+    }
+
+    .scroll-card .sc-img {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      display: block;
+      background: var(--bg-secondary);
+    }
+
+    .scroll-card .sc-placeholder {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+    }
+
+    .scroll-card .sc-info {
+      padding: 0.5rem 0.6rem;
+    }
+
+    .scroll-card .sc-info h4 {
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 0.1rem;
+    }
+
+    .scroll-card .sc-info .sc-meta {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    .scroll-card .sc-progress-bar {
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .scroll-card .sc-progress-fill {
+      height: 100%;
+      background: var(--accent);
+    }
+
+    /* ---- Mosaic Cover (4-up grid) ---- */
+    .mosaic-cover {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr;
+      gap: 2px;
+      background: var(--bg-secondary);
+      overflow: hidden;
+    }
+
+    .mosaic-cover img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .mosaic-cover .mosaic-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--bg-card);
+      color: var(--text-muted);
+      font-size: 1.2rem;
+    }
+
+    /* ---- List Detail Inline ---- */
+    .list-detail-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .list-detail-header .back-link {
+      color: var(--text-secondary);
+      font-size: 1.4rem;
+      cursor: pointer;
+      padding: 0.25rem;
+      transition: color 0.15s;
+    }
+
+    .list-detail-header .back-link:hover { color: var(--accent); }
+
+    .list-detail-header h2 { flex: 1; }
+
+    .list-detail-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* ---- Size Slider ---- */
+    .size-slider {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .size-slider .slider-icon {
+      color: var(--text-muted);
+      font-size: 0.7rem;
+      line-height: 1;
+    }
+
+    .size-slider .slider-icon.lg {
+      font-size: 1rem;
+    }
+
+    .size-slider input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 90px;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.08);
+      border-radius: 3px;
+      outline: none;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .size-slider input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: white;
+      cursor: pointer;
+    }
+
+    .size-slider input[type="range"]::-moz-range-thumb {
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .size-slider input[type="range"]::-moz-range-track {
+      background: rgba(255, 255, 255, 0.08);
+      height: 3px;
+      border: none;
+      border-radius: 3px;
+    }
+
+    @media (max-width: 480px) {
+      .scroll-card { width: 120px; }
+      .scroll-card .sc-info h4 { font-size: 0.72rem; }
+      .page-tab { padding: 0.5rem 0.8rem; font-size: 0.82rem; }
+      .size-slider input[type="range"] { width: 70px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <a class="logo" href="/" onclick="sessionStorage.setItem('active_tab','home');">Long<span>box</span></a>
+    <nav>
+      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="search-container">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="searchInput" placeholder="Search series..." autocomplete="off">
+    </div>
+    <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
+      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
+      <span id="profileName"></span>
+    </a>
+  </header>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Tabs -->
+    <div class="page-tabs">
+      <button class="page-tab active" data-tab="home">Home</button>
+      <button class="page-tab" data-tab="library">Library</button>
+      <button class="page-tab" data-tab="lists">Lists</button>
+      <button class="page-tab" data-tab="profile">Profile</button>
+    </div>
+
+    <!-- Home Tab -->
+    <div class="tab-content active" id="tab-home">
+      <!-- Continue Reading -->
+      <div class="scroll-section" id="continueSection" style="display:none;">
+        <div class="section-header">
+          <h3>Continue Reading</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('continueRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('continueRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="continueRow"></div></div>
+      </div>
+
+      <!-- Recently Added -->
+      <div class="scroll-section" id="recentAddedSection" style="display:none;">
+        <div class="section-header">
+          <h3>Recently Added</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('recentAddedRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('recentAddedRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="recentAddedRow"></div></div>
+      </div>
+
+      <!-- Recently Released -->
+      <div class="scroll-section" id="recentReleasedSection" style="display:none;">
+        <div class="section-header">
+          <h3>Recently Released</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('recentReleasedRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('recentReleasedRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="recentReleasedRow"></div></div>
+      </div>
+
+      <!-- Trending -->
+      <div class="scroll-section" id="trendingSection" style="display:none;">
+        <div class="section-header">
+          <h3>Trending in Your Library</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('trendingRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('trendingRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="trendingRow"></div></div>
+      </div>
+
+      <!-- All Series -->
+      <div class="scroll-section">
+        <div class="section-header">
+          <h3>All Series</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('allSeriesRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('allSeriesRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="allSeriesRow"></div></div>
+      </div>
+    </div>
+
+    <!-- Library Tab (full grid) -->
+    <div class="tab-content" id="tab-library">
+      <div class="toolbar">
+        <h2 id="pageTitle">Library</h2>
+        <div class="size-slider">
+          <span class="slider-icon">&#9638;</span>
+          <input type="range" id="gridSizeSlider" min="150" max="300" value="180" step="10">
+          <span class="slider-icon lg">&#9638;</span>
+        </div>
+        <select id="sortSelect">
+          <option value="name-asc">Name A-Z</option>
+          <option value="name-desc">Name Z-A</option>
+          <option value="issue_count-desc">Most Issues</option>
+          <option value="issue_count-asc">Fewest Issues</option>
+          <option value="created_at-desc">Recently Added</option>
+        </select>
+      </div>
+      <div class="grid" id="grid"></div>
+      <div class="empty-state" id="emptyState" style="display:none;">
+        <h2>No comics found</h2>
+        <p>Scan your library from the Admin page, or adjust your search.</p>
+        <a href="/admin.html" class="btn btn-primary">Go to Admin</a>
+      </div>
+    </div>
+
+    <!-- Lists Tab -->
+    <div class="tab-content" id="tab-lists">
+      <!-- Lists overview -->
+      <div id="listsOverview">
+        <div class="toolbar">
+          <h2>Reading Lists</h2>
+          <button class="btn btn-primary" onclick="createNewList()">New List</button>
+        </div>
+        <div class="grid" id="listsGrid"></div>
+        <div class="empty-state" id="listsEmpty" style="display:none;">
+          <h2>No reading lists yet</h2>
+          <p>Create a list to organize your comics.</p>
+        </div>
+      </div>
+      <!-- List detail (inline) -->
+      <div id="listDetail" style="display:none;">
+        <div class="list-detail-header">
+          <span class="back-link" onclick="showListsOverview()">&#8592;</span>
+          <h2 id="listDetailName" style="font-size:1.1rem;"></h2>
+          <div class="list-detail-actions">
+            <button class="btn btn-secondary" onclick="renameCurrentList()">Rename</button>
+            <button class="btn btn-secondary" style="color:#e74c3c;" onclick="deleteCurrentList()">Delete</button>
+          </div>
+        </div>
+        <div class="grid" id="listDetailGrid"></div>
+        <div id="listDetailEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">This list is empty. Add issues from a series page.</div>
+      </div>
+    </div>
+
+    <!-- Profile Tab -->
+    <div class="tab-content" id="tab-profile">
+      <div style="display:flex;align-items:center;gap:1.5rem;background:var(--bg-secondary);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
+        <div id="profileAvatar" style="width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:white;flex-shrink:0;"></div>
+        <div>
+          <h1 id="profileUsername" style="font-size:1.5rem;margin-bottom:0.25rem;"></h1>
+          <div id="profileRole" style="font-size:0.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;"></div>
+          <div id="profileJoined" style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;"></div>
+          <div style="display:flex;gap:1.5rem;margin-top:0.75rem;">
+            <div style="text-align:center;"><div id="profileStarted" style="font-size:1.5rem;font-weight:700;">0</div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">Started</div></div>
+            <div style="text-align:center;"><div id="profileCompleted" style="font-size:1.5rem;font-weight:700;">0</div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">Completed</div></div>
+          </div>
+          <button class="btn btn-secondary" style="margin-top:1rem;" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Currently Reading</h3>
+      <div class="grid" id="profileReading" style="margin-bottom:2rem;"></div>
+      <div id="profileReadingEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No issues in progress.</div>
+
+      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Completed</h3>
+      <div class="grid" id="profileRead" style="margin-bottom:2rem;"></div>
+      <div id="profileReadEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No completed issues yet.</div>
+
+      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Reading Lists</h3>
+      <div class="grid" id="profileLists"></div>
+      <div id="profileListsEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;">No reading lists yet.</div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    // Scroll row by direction (-1 left, 1 right), scroll by ~3 cards
+    function scrollRow(id, dir) {
+      const row = document.getElementById(id);
+      if (!row) return;
+      const amount = row.clientWidth * 0.75;
+      row.scrollBy({ left: dir * amount, behavior: 'smooth' });
+    }
+
+    // Update fade edges on scroll
+    function initScrollFades() {
+      document.querySelectorAll('.scroll-row').forEach(row => {
+        function update() {
+          const wrap = row.parentElement;
+          if (!wrap) return;
+          wrap.classList.toggle('can-scroll-left', row.scrollLeft > 10);
+          wrap.classList.toggle('can-scroll-right', row.scrollLeft < row.scrollWidth - row.clientWidth - 10);
+        }
+        row.addEventListener('scroll', update, { passive: true });
+        // Initial check after content loads
+        requestAnimationFrame(update);
+        setTimeout(update, 500);
+      });
+    }
+
+    let allSeries = [];
+
+    async function loadSeries() {
+      const res = await fetch('/api/series');
+      allSeries = await res.json();
+      renderSeries();
+      renderHomeRows();
+    }
+
+    // ---- Library Tab ----
+    function renderSeries() {
+      const query = document.getElementById('searchInput').value.toLowerCase().trim();
+      const [sortBy, sortDir] = document.getElementById('sortSelect').value.split('-');
+
+      let filtered = allSeries;
+      if (query) {
+        filtered = filtered.filter(s =>
+          s.name.toLowerCase().includes(query) ||
+          (s.publisher && s.publisher.toLowerCase().includes(query))
+        );
+      }
+
+      filtered.sort((a, b) => {
+        let va = a[sortBy], vb = b[sortBy];
+        if (typeof va === 'string') va = va.toLowerCase();
+        if (typeof vb === 'string') vb = vb.toLowerCase();
+        if (va < vb) return sortDir === 'asc' ? -1 : 1;
+        if (va > vb) return sortDir === 'asc' ? 1 : -1;
+        return 0;
+      });
+
+      const grid = document.getElementById('grid');
+      const empty = document.getElementById('emptyState');
+      const title = document.getElementById('pageTitle');
+
+      if (filtered.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+        title.textContent = query ? `No results for "${query}"` : 'Library';
+      } else {
+        grid.style.display = 'grid';
+        empty.style.display = 'none';
+        title.textContent = query ? `Results for "${query}"` : `Library (${filtered.length} series)`;
+        grid.innerHTML = filtered.map(seriesCard).join('');
+      }
+    }
+
+    // ---- Home Tab Rows ----
+    function scrollCardSeries(s) {
+      const thumb = thumbUrl(s.thumbnail_path);
+      return `
+        <a class="scroll-card" href="/series.html?id=${s.id}">
+          ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(s.name)}" loading="lazy">` : `<div class="sc-placeholder">&#128218;</div>`}
+          <div class="sc-info">
+            <h4 title="${esc(s.name)}">${esc(s.name)}</h4>
+            <span class="sc-meta">${s.publisher ? esc(s.publisher) : ''} ${s.start_year ? '&middot; ' + s.start_year : ''}</span>
+          </div>
+        </a>`;
+    }
+
+    function scrollCardIssue(issue, extra) {
+      const thumb = issue.thumbnail_path ? `/api/thumbnails/${issue.thumbnail_path}` : '';
+      return `
+        <a class="scroll-card" href="/reader.html?id=${issue.issue_id || issue.id}${issue.current_page ? '&page=' + issue.current_page : ''}">
+          ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(issue.title)}" loading="lazy">` : `<div class="sc-placeholder">&#128214;</div>`}
+          ${issue.current_page != null && issue.page_count ? `<div class="sc-progress-bar"><div class="sc-progress-fill" style="width:${Math.round((issue.current_page / issue.page_count) * 100)}%"></div></div>` : ''}
+          <div class="sc-info">
+            <h4 title="${esc(issue.title)}">${esc(issue.title)}</h4>
+            <span class="sc-meta">${extra || ''}</span>
+          </div>
+        </a>`;
+    }
+
+    function renderHomeRows() {
+      // All Series row
+      const allRow = document.getElementById('allSeriesRow');
+      const sorted = [...allSeries].sort((a, b) => a.name.localeCompare(b.name));
+      allRow.innerHTML = sorted.map(scrollCardSeries).join('');
+
+      // Recently Added (by created_at)
+      const recentAdded = [...allSeries].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 20);
+      if (recentAdded.length > 0) {
+        document.getElementById('recentAddedSection').style.display = 'block';
+        document.getElementById('recentAddedRow').innerHTML = recentAdded.map(scrollCardSeries).join('');
+      }
+
+      // Recently Released (by start_year, descending)
+      const withYear = allSeries.filter(s => s.start_year);
+      const recentReleased = [...withYear].sort((a, b) => (b.start_year || '').localeCompare(a.start_year || '')).slice(0, 20);
+      if (recentReleased.length > 0) {
+        document.getElementById('recentReleasedSection').style.display = 'block';
+        document.getElementById('recentReleasedRow').innerHTML = recentReleased.map(scrollCardSeries).join('');
+      }
+
+      // Trending — series with most issues (popular in library)
+      const trending = [...allSeries].sort((a, b) => b.issue_count - a.issue_count).slice(0, 20);
+      if (trending.length > 0) {
+        document.getElementById('trendingSection').style.display = 'block';
+        document.getElementById('trendingRow').innerHTML = trending.map(scrollCardSeries).join('');
+      }
+    }
+
+    async function loadContinueReading() {
+      try {
+        const res = await fetch('/api/progress');
+        const progress = await res.json();
+        const inProgress = progress.filter(p => !p.is_read && p.current_page > 0);
+        if (inProgress.length === 0) return;
+
+        document.getElementById('continueSection').style.display = 'block';
+        document.getElementById('continueRow').innerHTML = inProgress.slice(0, 20).map(p =>
+          scrollCardIssue(p, `${esc(p.series_name)} &middot; ${Math.round((p.current_page / p.page_count) * 100)}%`)
+        ).join('');
+      } catch (e) {}
+    }
+
+    // ---- Tabs ----
+    function switchToTab(tabName) {
+      document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === tabName));
+      document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+      document.getElementById('tab-' + tabName).classList.add('active');
+      sessionStorage.setItem('active_tab', tabName);
+
+      if (tabName === 'lists') loadLists();
+      if (tabName === 'profile') loadProfile();
+    }
+
+    document.querySelectorAll('.page-tab').forEach(tab => {
+      tab.addEventListener('click', () => switchToTab(tab.dataset.tab));
+    });
+
+    // Restore saved tab
+    const savedTab = sessionStorage.getItem('active_tab');
+    if (savedTab && document.getElementById('tab-' + savedTab)) {
+      switchToTab(savedTab);
+    }
+
+    // ---- Lists Tab ----
+    function buildListCover(items) {
+      const covers = (items || []).filter(i => i.thumbnail_path).slice(0, 4);
+      const img = (path) => `<img src="/api/thumbnails/${path}" alt="" loading="lazy">`;
+
+      if (covers.length === 0) {
+        return `<div style="width:100%;aspect-ratio:2/3;display:flex;align-items:center;justify-content:center;background:var(--bg-secondary);"><span style="font-size:3rem;color:var(--text-muted);">&#128220;</span></div>`;
+      }
+      if (covers.length === 1) {
+        return `<img src="/api/thumbnails/${covers[0].thumbnail_path}" alt="" loading="lazy" style="width:100%;aspect-ratio:2/3;object-fit:cover;display:block;">`;
+      }
+      if (covers.length === 2) {
+        return `<div class="mosaic-cover" style="grid-template-columns:1fr 1fr;grid-template-rows:1fr;">${img(covers[0].thumbnail_path)}${img(covers[1].thumbnail_path)}</div>`;
+      }
+      // 3 items — duplicate the first to fill the 4th slot
+      if (covers.length === 3) {
+        return `<div class="mosaic-cover">${img(covers[0].thumbnail_path)}${img(covers[1].thumbnail_path)}${img(covers[2].thumbnail_path)}${img(covers[0].thumbnail_path)}</div>`;
+      }
+      // 4+
+      return `<div class="mosaic-cover">${covers.map(c => img(c.thumbnail_path)).join('')}</div>`;
+    }
+
+    let listsCache = [];
+    let currentListId = null;
+
+    async function loadLists(force) {
+      try {
+        const res = await fetch('/api/lists');
+        listsCache = await res.json();
+
+        // Fetch items for mosaic covers
+        for (const list of listsCache) {
+          const detRes = await fetch(`/api/lists/${list.id}`);
+          const det = await detRes.json();
+          list.items = det.items || [];
+        }
+
+        renderListsGrid();
+      } catch (e) {
+        document.getElementById('listsGrid').innerHTML = '<p style="color:var(--text-muted);">Failed to load lists.</p>';
+      }
+    }
+
+    function renderListsGrid() {
+      const grid = document.getElementById('listsGrid');
+      const empty = document.getElementById('listsEmpty');
+
+      if (listsCache.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+
+      grid.style.display = 'grid';
+      empty.style.display = 'none';
+      grid.innerHTML = listsCache.map(l => {
+        return `
+          <div class="card" onclick="openListDetail(${l.id})" style="cursor:pointer;">
+            <div class="card-img-wrap">${buildListCover(l.items)}</div>
+            <div class="card-info">
+              <h3>${esc(l.name)}</h3>
+              <span class="meta">${l.item_count || 0} issues</span>
+            </div>
+          </div>`;
+      }).join('');
+    }
+
+    async function openListDetail(listId) {
+      currentListId = listId;
+      document.getElementById('listsOverview').style.display = 'none';
+      document.getElementById('listDetail').style.display = 'block';
+
+      const res = await fetch(`/api/lists/${listId}`);
+      const data = await res.json();
+      document.getElementById('listDetailName').textContent = data.name;
+
+      const grid = document.getElementById('listDetailGrid');
+      const empty = document.getElementById('listDetailEmpty');
+
+      if (!data.items || data.items.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+      } else {
+        grid.style.display = 'grid';
+        empty.style.display = 'none';
+        grid.innerHTML = data.items.map(item => `
+          <div class="card">
+            <a href="/reader.html?id=${item.issue_id}" class="card-link">
+              <div class="card-img-wrap">
+                ${item.thumbnail_path
+                  ? `<img src="/api/thumbnails/${item.thumbnail_path}" alt="${esc(item.title)}" loading="lazy">`
+                  : `<div class="card-placeholder">&#128214;</div>`
+                }
+              </div>
+            </a>
+            <div class="card-info">
+              <div class="card-info-row">
+                <h3 title="${esc(item.title)}">${esc(item.title)}</h3>
+                <button class="mark-read-btn" onclick="removeFromList(${listId}, ${item.issue_id})" title="Remove" style="background:#e74c3c;border:none;color:white;width:18px;height:18px;border-radius:50%;font-size:0.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&times;</button>
+              </div>
+              <span class="meta">${esc(item.series_name || '')}</span>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function showListsOverview() {
+      document.getElementById('listDetail').style.display = 'none';
+      document.getElementById('listsOverview').style.display = 'block';
+      currentListId = null;
+      loadLists();
+    }
+
+    async function renameCurrentList() {
+      if (!currentListId) return;
+      const name = prompt('New name:');
+      if (!name || !name.trim()) return;
+      await fetch(`/api/lists/${currentListId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      document.getElementById('listDetailName').textContent = name.trim();
+    }
+
+    async function deleteCurrentList() {
+      if (!currentListId) return;
+      if (!confirm('Delete this list?')) return;
+      await fetch(`/api/lists/${currentListId}`, { method: 'DELETE' });
+      showListsOverview();
+    }
+
+    async function removeFromList(listId, issueId) {
+      await fetch(`/api/lists/${listId}/items/${issueId}`, { method: 'DELETE' });
+      openListDetail(listId);
+    }
+
+    async function createNewList() {
+      const name = prompt('List name:');
+      if (!name || !name.trim()) return;
+      await fetch('/api/lists', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim() }),
+      });
+      loadLists();
+    }
+
+    // ---- Profile Tab ----
+    let profileLoaded = false;
+    async function loadProfile() {
+      if (profileLoaded) return;
+      profileLoaded = true;
+      try {
+        const res = await fetch('/api/auth/me');
+        const user = await res.json();
+        if (!user.authenticated) return;
+
+        document.getElementById('profileAvatar').textContent = user.username.charAt(0).toUpperCase();
+        document.getElementById('profileUsername').textContent = user.username;
+        document.getElementById('profileRole').textContent = user.isAdmin ? 'Admin' : 'Member';
+        document.getElementById('profileJoined').textContent = 'Joined ' + new Date(user.createdAt).toLocaleDateString();
+        document.getElementById('profileStarted').textContent = user.stats.issuesStarted;
+        document.getElementById('profileCompleted').textContent = user.stats.issuesCompleted;
+
+        // Load reading progress
+        const progRes = await fetch('/api/progress');
+        const progress = await progRes.json();
+
+        const reading = progress.filter(p => !p.is_read && p.current_page > 0);
+        const completed = progress.filter(p => p.is_read);
+
+        const readingGrid = document.getElementById('profileReading');
+        const readingEmpty = document.getElementById('profileReadingEmpty');
+        if (reading.length > 0) {
+          readingGrid.style.display = 'grid';
+          readingGrid.innerHTML = reading.map(p => issueCard(p)).join('');
+        } else {
+          readingGrid.style.display = 'none';
+          readingEmpty.style.display = 'block';
+        }
+
+        const readGrid = document.getElementById('profileRead');
+        const readEmpty = document.getElementById('profileReadEmpty');
+        if (completed.length > 0) {
+          readGrid.style.display = 'grid';
+          readGrid.innerHTML = completed.map(p => {
+            const thumb = p.thumbnail_path ? `/api/thumbnails/${p.thumbnail_path}` : '';
+            const num = p.issue_number != null ? '#' + p.issue_number : '';
+            return `
+              <a class="card is-read" href="/reader.html?id=${p.issue_id || p.id}">
+                <div class="card-img-wrap">
+                  ${thumb ? `<img src="${thumb}" alt="${esc(p.title)}" loading="lazy">` : `<div class="card-placeholder">&#128214;</div>`}
+                  <div class="read-toggle" data-is-read="1" style="pointer-events:none;"></div>
+                </div>
+                <div class="card-info">
+                  <h3 title="${esc(p.title)}">${num || esc(p.title)}</h3>
+                  <span class="meta">${esc(p.series_name || '')}</span>
+                </div>
+              </a>`;
+          }).join('');
+        } else {
+          readGrid.style.display = 'none';
+          readEmpty.style.display = 'block';
+        }
+
+        // Load reading lists
+        const listsRes = await fetch('/api/lists');
+        const lists = await listsRes.json();
+        const listsGrid = document.getElementById('profileLists');
+        const listsEmpty = document.getElementById('profileListsEmpty');
+
+        if (lists.length > 0) {
+          // Fetch items for mosaic
+          for (const l of lists) {
+            try {
+              const dr = await fetch(`/api/lists/${l.id}`);
+              const dd = await dr.json();
+              l.items = dd.items || [];
+            } catch(e) { l.items = []; }
+          }
+          listsGrid.style.display = 'grid';
+          listsGrid.innerHTML = lists.map(l => {
+            return `
+              <div class="card" onclick="document.querySelector('[data-tab=lists]').click();setTimeout(()=>openListDetail(${l.id}),100);" style="cursor:pointer;">
+                <div class="card-img-wrap">${buildListCover(l.items)}</div>
+                <div class="card-info">
+                  <h3>${esc(l.name)}</h3>
+                  <span class="meta">${l.item_count || 0} issues</span>
+                </div>
+              </div>`;
+          }).join('');
+        } else {
+          listsGrid.style.display = 'none';
+          listsEmpty.style.display = 'block';
+        }
+      } catch (e) {}
+    }
+
+    async function logout() {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      window.location.href = '/login.html';
+    }
+
+    // Search switches to library tab automatically
+    document.getElementById('searchInput').addEventListener('input', debounce(() => {
+      const query = document.getElementById('searchInput').value.trim();
+      if (query) {
+        document.querySelectorAll('.page-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === 'library'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('tab-library').classList.add('active');
+      }
+      renderSeries();
+    }, 200));
+
+    document.getElementById('sortSelect').addEventListener('change', renderSeries);
+
+    // Grid size slider
+    const gridSlider = document.getElementById('gridSizeSlider');
+    const savedSize = localStorage.getItem('grid_size');
+    if (savedSize) gridSlider.value = savedSize;
+
+    function applyGridSize() {
+      const size = gridSlider.value + 'px';
+      document.getElementById('grid').style.gridTemplateColumns = `repeat(auto-fill, minmax(${size}, 1fr))`;
+      localStorage.setItem('grid_size', gridSlider.value);
+    }
+
+    gridSlider.addEventListener('input', applyGridSize);
+    applyGridSize();
+
+    window.addEventListener('beforeunload', () => {
+      sessionStorage.setItem('library_scroll', window.scrollY);
+      // Tab is already saved on switch via switchToTab()
+    });
+
+    async function start() {
+      await loadProgressData();
+      await loadSeries();
+      loadContinueReading();
+      initScrollFades();
+      const saved = sessionStorage.getItem('library_scroll');
+      if (saved) {
+        requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));
+      }
+    }
+
+    // Load current user for navbar
+    fetch('/api/auth/me').then(r => r.json()).then(user => {
+      if (user.authenticated) {
+        if (user.isAdmin) document.getElementById('adminLink').style.display = '';
+        document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
+        document.getElementById('profileName').textContent = user.username;
+      }
+    }).catch(() => {});
+
+    start();
+  </script>
+<footer class="site-footer">
+  <div>&copy; 2026 <a href="https://outmaneuver.cargo.site/" target="_blank" rel="noopener">Outmaneuver</a></div>
+  <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Outmaneuver" data-color="#101010" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#ffffff" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+</footer>
+</body>
+</html>

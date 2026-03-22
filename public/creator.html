@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creator — Longbox</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    /* ---- Creator Header (Plex actor-style) ---- */
+    .creator-header {
+      display: flex;
+      gap: 2rem;
+      padding: 2rem 0;
+      align-items: flex-start;
+    }
+
+    .creator-photo {
+      flex-shrink: 0;
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      overflow: hidden;
+      background: var(--bg-card);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .creator-photo img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .creator-photo .photo-placeholder {
+      font-size: 4rem;
+      color: var(--text-muted);
+    }
+
+    .creator-info {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .creator-info h1 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .creator-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .creator-meta .meta-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .creator-description {
+      font-size: 0.9rem;
+      line-height: 1.65;
+      color: var(--text-secondary);
+      max-height: 6em;
+      overflow: hidden;
+      position: relative;
+      transition: max-height 0.3s ease;
+    }
+
+    .creator-description.expanded {
+      max-height: none;
+    }
+
+    .creator-description a {
+      color: var(--accent);
+    }
+
+    .desc-toggle {
+      background: none;
+      border: none;
+      color: var(--accent);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.3rem 0;
+      font-family: inherit;
+    }
+
+    .desc-toggle:hover {
+      text-decoration: underline;
+    }
+
+    /* ---- Horizontal Scroll Row (same as index.html) ---- */
+    .scroll-section {
+      margin-bottom: 2rem;
+    }
+
+    .scroll-section .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .scroll-section h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .scroll-nav {
+      display: flex;
+      gap: 0.25rem;
+    }
+
+    .scroll-nav button {
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .scroll-nav button:hover {
+      background: rgba(255, 255, 255, 0.15);
+      color: white;
+    }
+
+    .scroll-nav button:disabled {
+      opacity: 0.2;
+      cursor: default;
+    }
+
+    .scroll-row-wrap {
+      position: relative;
+      overflow: hidden;
+    }
+
+    .scroll-row-wrap::before,
+    .scroll-row-wrap::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      width: 40px;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .scroll-row-wrap::before {
+      left: 0;
+      background: linear-gradient(to right, var(--bg-primary), transparent);
+    }
+
+    .scroll-row-wrap::after {
+      right: 0;
+      background: linear-gradient(to left, var(--bg-primary), transparent);
+    }
+
+    .scroll-row-wrap.can-scroll-left::before { opacity: 1; }
+    .scroll-row-wrap.can-scroll-right::after { opacity: 1; }
+
+    .scroll-row {
+      display: flex;
+      gap: 0.75rem;
+      overflow-x: auto;
+      padding-bottom: 0.5rem;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+
+    .scroll-row::-webkit-scrollbar { display: none; }
+
+    .scroll-card {
+      flex-shrink: 0;
+      width: 150px;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      overflow: hidden;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      text-decoration: none;
+      color: inherit;
+      display: block;
+    }
+
+    .scroll-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px var(--shadow);
+    }
+
+    .scroll-card .sc-img {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      object-fit: cover;
+      display: block;
+      background: var(--bg-secondary);
+    }
+
+    .scroll-card .sc-placeholder {
+      width: 100%;
+      aspect-ratio: 2 / 3;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      color: var(--text-muted);
+      background: var(--bg-secondary);
+    }
+
+    .scroll-card .sc-info {
+      padding: 0.5rem 0.6rem;
+    }
+
+    .scroll-card .sc-info h4 {
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 0.1rem;
+    }
+
+    .scroll-card .sc-info .sc-meta {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+    }
+
+    /* Dimmed card for volumes not in library */
+    .scroll-card.dimmed {
+      opacity: 0.5;
+      filter: grayscale(40%);
+    }
+
+    .scroll-card.dimmed:hover {
+      opacity: 0.75;
+      filter: grayscale(20%);
+    }
+
+    .scroll-card .sc-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: #000;
+      font-size: 0.6rem;
+      font-weight: 700;
+      padding: 0.15rem 0.4rem;
+      border-radius: 3px;
+      text-transform: uppercase;
+    }
+
+    /* Loading spinner */
+    .loading {
+      text-align: center;
+      padding: 3rem;
+      color: var(--text-muted);
+    }
+
+    .spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .empty-message {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      padding: 1rem 0;
+    }
+
+    @media (max-width: 768px) {
+      .creator-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+
+      .creator-photo {
+        width: 150px;
+        height: 150px;
+      }
+
+      .creator-info h1 {
+        font-size: 1.5rem;
+      }
+
+      .creator-meta {
+        justify-content: center;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .scroll-card { width: 120px; }
+      .scroll-card .sc-info h4 { font-size: 0.72rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <header class="navbar">
+    <a class="logo" href="/" onclick="sessionStorage.setItem('active_tab','library');">Long<span>box</span></a>
+    <nav>
+      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
+    </nav>
+    <div class="spacer"></div>
+    <div class="search-container">
+      <span class="search-icon">&#128269;</span>
+      <input type="text" id="searchInput" placeholder="Search..." autocomplete="off">
+    </div>
+    <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
+      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
+      <span id="profileName"></span>
+    </a>
+  </header>
+
+  <!-- Main -->
+  <div class="main">
+    <!-- Loading State -->
+    <div class="loading" id="loadingState">
+      <div class="spinner"></div>
+      <p>Loading creator info...</p>
+    </div>
+
+    <!-- Creator Header -->
+    <div class="creator-header" id="creatorHeader" style="display:none;">
+      <div class="creator-photo" id="creatorPhoto">
+        <span class="photo-placeholder">&#128100;</span>
+      </div>
+      <div class="creator-info">
+        <h1 id="creatorName"></h1>
+        <div class="creator-meta" id="creatorMeta"></div>
+        <div class="creator-description" id="creatorDesc"></div>
+        <button class="desc-toggle" id="descToggle" style="display:none;">Show more</button>
+      </div>
+    </div>
+
+    <!-- In Your Library -->
+    <div class="scroll-section" id="librarySection" style="display:none;">
+      <div class="section-header">
+        <h3>In Your Library</h3>
+        <div class="scroll-nav">
+          <button onclick="scrollRow('libraryRow', -1)">&lsaquo;</button>
+          <button onclick="scrollRow('libraryRow', 1)">&rsaquo;</button>
+        </div>
+      </div>
+      <div class="scroll-row-wrap"><div class="scroll-row" id="libraryRow"></div></div>
+    </div>
+
+    <!-- Other Works -->
+    <div class="scroll-section" id="otherWorksSection" style="display:none;">
+      <div class="section-header">
+        <h3>Other Works</h3>
+        <div class="scroll-nav">
+          <button onclick="scrollRow('otherWorksRow', -1)">&lsaquo;</button>
+          <button onclick="scrollRow('otherWorksRow', 1)">&rsaquo;</button>
+        </div>
+      </div>
+      <div class="scroll-row-wrap"><div class="scroll-row" id="otherWorksRow"></div></div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const personId = getParam('id');
+    const personName = getParam('name') || '';
+
+    if (!personId) {
+      window.location.href = '/';
+    }
+
+    // Set a preliminary title from the name param
+    if (personName) {
+      document.title = `${decodeURIComponent(personName)} — Longbox`;
+      document.getElementById('creatorName').textContent = decodeURIComponent(personName);
+    }
+
+    function scrollRow(id, dir) {
+      const row = document.getElementById(id);
+      if (!row) return;
+      const amount = row.clientWidth * 0.75;
+      row.scrollBy({ left: dir * amount, behavior: 'smooth' });
+    }
+
+    function initScrollFades() {
+      document.querySelectorAll('.scroll-row').forEach(row => {
+        function update() {
+          const wrap = row.parentElement;
+          if (!wrap) return;
+          wrap.classList.toggle('can-scroll-left', row.scrollLeft > 10);
+          wrap.classList.toggle('can-scroll-right', row.scrollLeft < row.scrollWidth - row.clientWidth - 10);
+        }
+        row.addEventListener('scroll', update, { passive: true });
+        requestAnimationFrame(update);
+        setTimeout(update, 500);
+      });
+    }
+
+    async function loadCreator() {
+      const loading = document.getElementById('loadingState');
+      const header = document.getElementById('creatorHeader');
+
+      try {
+        // Fetch Comic Vine person data, local library by creator name, and all series
+        const name = decodeURIComponent(personName);
+        const [cvRes, libRes, allSeriesRes] = await Promise.all([
+          fetch(`/api/comicvine/person/${personId}`),
+          fetch(`/api/creators/${encodeURIComponent(name)}/series`),
+          fetch('/api/series'),
+        ]);
+
+        const person = await cvRes.json();
+        let librarySeries = libRes.ok ? await libRes.json() : [];
+        const allLocalSeries = allSeriesRes.ok ? await allSeriesRes.json() : [];
+
+        // If creator search found nothing, try matching by Comic Vine volume credits
+        if (librarySeries.length === 0 && person.volume_credits && person.volume_credits.length > 0) {
+          const cvVolumeIds = new Set(person.volume_credits.map(v => String(v.id)));
+          librarySeries = allLocalSeries.filter(s => s.comicvine_id && cvVolumeIds.has(String(s.comicvine_id)));
+        }
+
+        loading.style.display = 'none';
+        header.style.display = 'flex';
+
+        if (person.error) {
+          // Still show from name param, just no Comic Vine data
+          document.getElementById('creatorName').textContent = decodeURIComponent(personName) || 'Unknown Creator';
+          renderLibrary(librarySeries);
+          return;
+        }
+
+        // Update title and header
+        document.title = `${person.name} — Longbox`;
+        document.getElementById('creatorName').textContent = person.name;
+
+        // Photo
+        const photoEl = document.getElementById('creatorPhoto');
+        if (person.image_large_url || person.image_url) {
+          photoEl.innerHTML = `<img src="${esc(person.image_large_url || person.image_url)}" alt="${esc(person.name)}">`;
+        }
+
+        // Meta info
+        const metaParts = [];
+        if (person.birth) {
+          metaParts.push(`<span class="meta-item">Born: ${esc(person.birth)}</span>`);
+        }
+        if (person.death) {
+          metaParts.push(`<span class="meta-item">Died: ${esc(person.death)}</span>`);
+        }
+        if (person.country) {
+          metaParts.push(`<span class="meta-item">${esc(person.country)}</span>`);
+        }
+        if (person.volume_credits && person.volume_credits.length > 0) {
+          metaParts.push(`<span class="meta-item">${person.volume_credits.length} volumes on Comic Vine</span>`);
+        }
+        document.getElementById('creatorMeta').innerHTML = metaParts.join('');
+
+        // Description
+        const descEl = document.getElementById('creatorDesc');
+        const toggleBtn = document.getElementById('descToggle');
+        if (person.description) {
+          const cleaned = person.description
+            .replace(/<img[^>]*>/gi, '')
+            .replace(/<figure[^>]*>[\s\S]*?<\/figure>/gi, '')
+            .replace(/<h[2-4][^>]*>[^<]*<\/h[2-4]>[\s\S]*$/i, '')
+            .trim();
+          descEl.innerHTML = cleaned;
+
+          // Rewrite links in description
+          rewriteComicVineLinks(descEl);
+
+          // Show toggle if content overflows
+          requestAnimationFrame(() => {
+            if (descEl.scrollHeight > descEl.clientHeight + 5) {
+              toggleBtn.style.display = 'inline-block';
+              toggleBtn.onclick = () => {
+                descEl.classList.toggle('expanded');
+                toggleBtn.textContent = descEl.classList.contains('expanded') ? 'Show less' : 'Show more';
+              };
+            }
+          });
+        }
+
+        // Render library section
+        renderLibrary(librarySeries);
+
+        // Render other works (Comic Vine volumes not in library)
+        renderOtherWorks(person.volume_credits || [], librarySeries, allLocalSeries);
+
+        initScrollFades();
+
+      } catch (err) {
+        loading.innerHTML = `<p style="color:var(--accent);">Failed to load creator: ${esc(err.message)}</p>`;
+      }
+    }
+
+    function rewriteComicVineLinks(container) {
+      const links = container.querySelectorAll('a[href]');
+      links.forEach(link => {
+        const href = link.getAttribute('href');
+        if (!href) return;
+
+        const personMatch = href.match(/\/4040-(\d+)\/?$/);
+        if (personMatch) {
+          const pid = personMatch[1];
+          const name = link.textContent.trim();
+          link.setAttribute('href', `/creator.html?id=${pid}&name=${encodeURIComponent(name)}`);
+          link.removeAttribute('target');
+          return;
+        }
+
+        const volumeMatch = href.match(/\/4050-(\d+)\/?$/);
+        if (volumeMatch) {
+          link.setAttribute('href', `https://comicvine.gamespot.com${href}`);
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener');
+          return;
+        }
+
+        if (href.startsWith('/') && !href.startsWith('//')) {
+          link.setAttribute('href', `https://comicvine.gamespot.com${href}`);
+          link.setAttribute('target', '_blank');
+          link.setAttribute('rel', 'noopener');
+        }
+      });
+    }
+
+    function renderLibrary(librarySeries) {
+      if (!librarySeries || librarySeries.length === 0) return;
+
+      const section = document.getElementById('librarySection');
+      section.style.display = 'block';
+
+      const row = document.getElementById('libraryRow');
+      row.innerHTML = librarySeries.map(s => {
+        const thumb = thumbUrl(s.thumbnail_path);
+        return `
+          <a class="scroll-card" href="/series.html?id=${s.id}">
+            ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(s.name)}" loading="lazy">` : `<div class="sc-placeholder">&#128218;</div>`}
+            <div class="sc-info">
+              <h4 title="${esc(s.name)}">${esc(s.name)}</h4>
+              <span class="sc-meta">${s.publisher ? esc(s.publisher) : ''} ${s.start_year ? '&middot; ' + s.start_year : ''}</span>
+            </div>
+          </a>`;
+      }).join('');
+    }
+
+    async function renderOtherWorks(volumeCredits, librarySeries, allLocal) {
+      if (!volumeCredits || volumeCredits.length === 0) return;
+
+      const localCvIds = new Set((allLocal || []).filter(s => s.comicvine_id).map(s => String(s.comicvine_id)));
+      const otherWorks = volumeCredits.filter(v => !localCvIds.has(String(v.id)));
+
+      if (otherWorks.length === 0) return;
+
+      const section = document.getElementById('otherWorksSection');
+      section.style.display = 'block';
+      const row = document.getElementById('otherWorksRow');
+
+      // Show placeholders first, then fetch images
+      const displayed = otherWorks.slice(0, 40);
+      row.innerHTML = displayed.map(v => {
+        const cvUrl = v.site_detail_url || `https://comicvine.gamespot.com/volume/4050-${v.id}/`;
+        return `
+          <a class="scroll-card dimmed" href="${esc(cvUrl)}" target="_blank" rel="noopener" id="ow-${v.id}">
+            <div class="sc-placeholder" id="ow-img-${v.id}">&#128218;</div>
+            <div class="sc-info">
+              <h4 title="${esc(v.name)}">${esc(v.name)}</h4>
+              <span class="sc-meta">Comic Vine</span>
+            </div>
+          </a>`;
+      }).join('');
+
+      initScrollFades();
+
+      // Fetch cover images in batches (rate limited, so do a few at a time)
+      for (let i = 0; i < Math.min(displayed.length, 20); i++) {
+        const v = displayed[i];
+        try {
+          const res = await fetch(`/api/comicvine/volume/${v.id}`);
+          const vol = await res.json();
+          if (vol.image_url) {
+            const placeholder = document.getElementById(`ow-img-${v.id}`);
+            if (placeholder) {
+              const img = document.createElement('img');
+              img.className = 'sc-img';
+              img.src = vol.image_url;
+              img.alt = vol.name || '';
+              img.loading = 'lazy';
+              placeholder.replaceWith(img);
+            }
+          }
+        } catch (e) { /* skip */ }
+      }
+    }
+
+    // Search handler - redirect to home with search
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const q = e.target.value.trim();
+        if (q) window.location.href = `/?search=${encodeURIComponent(q)}`;
+      }
+    });
+
+    // Load current user for navbar
+    fetch('/api/auth/me').then(r => r.json()).then(user => {
+      if (user.authenticated) {
+        if (user.isAdmin) document.getElementById('adminLink').style.display = '';
+        document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
+        document.getElementById('profileName').textContent = user.username;
+      }
+    }).catch(() => {});
+
+    loadCreator();
+  </script>
+<footer class="site-footer">
+  <div>&copy; 2026 <a href="https://outmaneuver.cargo.site/" target="_blank" rel="noopener">Outmaneuver</a></div>
+  <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Outmaneuver" data-color="#101010" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#ffffff" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+</footer>
+</body>
+</html>

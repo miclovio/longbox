@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — Longbox</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+
+    .auth-card {
+      background: var(--bg-secondary);
+      border-radius: 12px;
+      padding: 2.5rem 2rem;
+      width: 100%;
+      max-width: 380px;
+      margin: 1rem;
+    }
+
+    .auth-card .logo {
+      text-align: center;
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 0.25rem;
+    }
+
+    .auth-card .logo span:first-child { color: var(--accent); }
+    .auth-card .logo span:last-child { color: var(--text-primary); }
+
+    .auth-card .subtitle {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 2rem;
+    }
+
+    .auth-card .tabs {
+      display: flex;
+      margin-bottom: 1.5rem;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.05);
+      padding: 3px;
+    }
+
+    .auth-card .tab {
+      flex: 1;
+      text-align: center;
+      padding: 0.5rem;
+      border-radius: 22px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      color: var(--text-muted);
+      transition: all 0.2s;
+      border: none;
+      background: none;
+      font-family: inherit;
+    }
+
+    .auth-card .tab.active {
+      background: var(--accent);
+      color: white;
+    }
+
+    .field {
+      margin-bottom: 1rem;
+    }
+
+    .field label {
+      display: block;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.35rem;
+    }
+
+    .field input {
+      width: 100%;
+      padding: 0.65rem 1rem;
+      border: none;
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .field input:focus {
+      box-shadow: 0 0 0 2px var(--accent);
+    }
+
+    .auth-card .submit-btn {
+      width: 100%;
+      padding: 0.7rem;
+      border: none;
+      border-radius: 24px;
+      background: var(--accent);
+      color: white;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      margin-top: 0.5rem;
+      font-family: inherit;
+    }
+
+    .auth-card .submit-btn:hover { background: var(--accent-hover); }
+    .auth-card .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    .auth-card .error {
+      background: rgba(204, 51, 51, 0.15);
+      color: #e74c3c;
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+      display: none;
+    }
+
+    .auth-card .setup-msg {
+      text-align: center;
+      color: var(--accent);
+      font-size: 0.8rem;
+      margin-bottom: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="auth-card">
+    <div class="logo"><span>Long</span><span>box</span></div>
+    <div class="subtitle" id="subtitle">Sign in to your library</div>
+
+    <div class="tabs">
+      <button class="tab active" id="tabLogin" onclick="switchTab('login')">Sign In</button>
+      <button class="tab" id="tabRegister" onclick="switchTab('register')">Register</button>
+    </div>
+
+    <div class="setup-msg" id="setupMsg" style="display:none;">
+      First account becomes the admin.
+    </div>
+
+    <div class="error" id="error"></div>
+
+    <form id="authForm" onsubmit="handleSubmit(event)">
+      <div class="field">
+        <label for="username">Username</label>
+        <input type="text" id="username" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="submit-btn" id="submitBtn">Sign In</button>
+    </form>
+  </div>
+
+  <script>
+    let mode = 'login';
+
+    async function checkSetup() {
+      try {
+        const res = await fetch('/api/auth/setup');
+        const data = await res.json();
+        if (data.needsSetup) {
+          switchTab('register');
+          document.getElementById('setupMsg').style.display = 'block';
+          document.getElementById('subtitle').textContent = 'Create your admin account';
+        }
+      } catch (e) {}
+
+      // If already logged in, redirect
+      try {
+        const res = await fetch('/api/auth/me');
+        const data = await res.json();
+        if (data.authenticated) {
+          window.location.href = '/';
+        }
+      } catch (e) {}
+    }
+
+    function switchTab(tab) {
+      mode = tab;
+      document.getElementById('tabLogin').classList.toggle('active', tab === 'login');
+      document.getElementById('tabRegister').classList.toggle('active', tab === 'register');
+      document.getElementById('submitBtn').textContent = tab === 'login' ? 'Sign In' : 'Create Account';
+      document.getElementById('password').autocomplete = tab === 'login' ? 'current-password' : 'new-password';
+      document.getElementById('error').style.display = 'none';
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      const btn = document.getElementById('submitBtn');
+      const err = document.getElementById('error');
+      err.style.display = 'none';
+      btn.disabled = true;
+
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+
+      try {
+        const endpoint = mode === 'login' ? '/api/auth/login' : '/api/auth/register';
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          err.textContent = data.error || 'Something went wrong';
+          err.style.display = 'block';
+          btn.disabled = false;
+          return;
+        }
+
+        window.location.href = '/';
+      } catch (error) {
+        err.textContent = 'Connection failed';
+        err.style.display = 'block';
+        btn.disabled = false;
+      }
+    }
+
+    checkSetup();
+  </script>
+<footer class="site-footer">
+  <div>&copy; 2026 <a href="https://outmaneuver.cargo.site/" target="_blank" rel="noopener">Outmaneuver</a></div>
+  <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Outmaneuver" data-color="#101010" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#ffffff" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+</footer>
+</body>
+</html>

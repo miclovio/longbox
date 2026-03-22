@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reading Lists — Longbox</title>
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .lists-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 2rem;
+    }
+
+    .list-card {
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative;
+    }
+
+    .list-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 12px 32px var(--shadow);
+    }
+
+    .list-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .list-card .list-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .list-card .list-actions {
+      position: absolute;
+      top: 0.75rem;
+      right: 0.75rem;
+      display: flex;
+      gap: 0.25rem;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+
+    .list-card:hover .list-actions { opacity: 1; }
+
+    .list-card .list-actions button {
+      background: rgba(255,255,255,0.08);
+      border: none;
+      color: var(--text-secondary);
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.8rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.15s;
+    }
+
+    .list-card .list-actions button:hover {
+      background: rgba(255,255,255,0.15);
+      color: var(--text-primary);
+    }
+
+    .list-card .list-actions button.delete-btn:hover {
+      color: #e74c3c;
+      background: rgba(231, 76, 60, 0.15);
+    }
+
+    .create-card {
+      background: rgba(255,255,255,0.04);
+      border: 2px dashed var(--border);
+      border-radius: var(--radius);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 80px;
+      cursor: pointer;
+      transition: all 0.2s;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .create-card:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .create-input-wrap {
+      display: none;
+      background: var(--bg-card);
+      border-radius: var(--radius);
+      padding: 1rem;
+      border: 2px solid var(--accent);
+    }
+
+    .create-input-wrap.visible { display: block; }
+
+    .create-input-wrap input {
+      width: 100%;
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .create-input-wrap input:focus { box-shadow: 0 0 0 2px var(--accent); }
+
+    .create-input-wrap .create-hint {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+      text-align: center;
+    }
+
+    /* Detail view */
+    .detail-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      flex-wrap: wrap;
+    }
+
+    .detail-header h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+    }
+
+    .detail-header .detail-actions {
+      display: flex;
+      gap: 0.5rem;
+      margin-left: auto;
+    }
+
+    .back-link {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .back-link:hover { color: var(--accent); }
+
+    /* Drag & drop */
+    .detail-grid .card {
+      position: relative;
+      cursor: grab;
+    }
+
+    .detail-grid .card.dragging {
+      opacity: 0.4;
+    }
+
+    .detail-grid .card.drag-over {
+      outline: 2px solid var(--accent);
+      outline-offset: 2px;
+    }
+
+    .remove-item-btn {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: none;
+      background: rgba(0,0,0,0.7);
+      color: rgba(255,255,255,0.7);
+      font-size: 0.75rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+      opacity: 0;
+      transition: opacity 0.2s, background 0.2s;
+    }
+
+    .card:hover .remove-item-btn { opacity: 1; }
+
+    .remove-item-btn:hover {
+      background: #e74c3c;
+      color: white;
+    }
+
+    /* Rename modal */
+    .rename-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .rename-overlay.visible { display: flex; }
+
+    .rename-dialog {
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      min-width: 320px;
+    }
+
+    .rename-dialog h3 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .rename-dialog input {
+      width: 100%;
+      padding: 0.6rem 1rem;
+      border: none;
+      border-radius: 24px;
+      background: rgba(255,255,255,0.08);
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      outline: none;
+      font-family: inherit;
+    }
+
+    .rename-dialog input:focus { box-shadow: 0 0 0 2px var(--accent); }
+
+    .rename-dialog .dialog-btns {
+      display: flex;
+      gap: 0.5rem;
+      justify-content: flex-end;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <a class="logo" href="/">Long<span>box</span></a>
+    <nav>
+      <a href="/">Library</a>
+      <a href="/lists.html" class="active">Lists</a>
+      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
+    </nav>
+    <div class="spacer"></div>
+    <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
+      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
+      <span id="profileName"></span>
+    </a>
+  </header>
+
+  <div class="main">
+    <!-- All Lists View -->
+    <div id="allListsView">
+      <div class="toolbar">
+        <h2>Reading Lists</h2>
+      </div>
+      <div class="lists-grid" id="listsGrid">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+
+    <!-- Detail View -->
+    <div id="detailView" style="display:none;">
+      <div class="detail-header">
+        <span class="back-link" id="backToLists">&larr; All Lists</span>
+        <h2 id="detailName"></h2>
+        <div class="detail-actions">
+          <button class="btn btn-secondary" id="renameListBtn">Rename</button>
+          <button class="btn btn-secondary" id="deleteListBtn" style="color:#e74c3c;">Delete</button>
+        </div>
+      </div>
+      <div class="grid detail-grid" id="detailGrid"></div>
+      <div class="empty-state" id="detailEmpty" style="display:none;">
+        <h2>This list is empty</h2>
+        <p>Add issues from any series page using the + button on each issue card.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rename Dialog -->
+  <div class="rename-overlay" id="renameOverlay">
+    <div class="rename-dialog">
+      <h3>Rename List</h3>
+      <input type="text" id="renameInput" placeholder="List name...">
+      <div class="dialog-btns">
+        <button class="btn btn-secondary" id="renameCancelBtn">Cancel</button>
+        <button class="btn btn-primary" id="renameSaveBtn">Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let allLists = [];
+    let currentListId = null;
+    let currentListItems = [];
+
+    // ---- Load all lists ----
+    async function loadLists() {
+      const res = await fetch('/api/lists');
+      allLists = await res.json();
+
+      // Auto-create "Want to Read" if no lists exist
+      if (allLists.length === 0) {
+        await fetch('/api/lists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: 'Want to Read' }),
+        });
+        const r2 = await fetch('/api/lists');
+        allLists = await r2.json();
+      }
+
+      renderLists();
+    }
+
+    function renderLists() {
+      const grid = document.getElementById('listsGrid');
+      const cards = allLists.map(l => `
+        <div class="list-card" data-id="${l.id}" onclick="openList(${l.id})">
+          <div class="list-actions">
+            <button title="Rename" onclick="event.stopPropagation(); promptRename(${l.id}, '${esc(l.name).replace(/'/g, "\\'")}')">&#9998;</button>
+            <button class="delete-btn" title="Delete" onclick="event.stopPropagation(); deleteList(${l.id}, '${esc(l.name).replace(/'/g, "\\'")}')">&#10005;</button>
+          </div>
+          <h3>${esc(l.name)}</h3>
+          <span class="list-meta">${l.item_count} issue${l.item_count !== 1 ? 's' : ''}</span>
+        </div>
+      `).join('');
+
+      grid.innerHTML = cards + `
+        <div class="create-card" id="createCard" onclick="showCreateInput()">+ New List</div>
+        <div class="create-input-wrap" id="createWrap">
+          <input type="text" id="createInput" placeholder="List name..." maxlength="100">
+          <div class="create-hint">Press Enter to create, Escape to cancel</div>
+        </div>
+      `;
+
+      // Bind create input
+      const input = document.getElementById('createInput');
+      input.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter') {
+          const name = input.value.trim();
+          if (!name) return;
+          await fetch('/api/lists', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name }),
+          });
+          input.value = '';
+          hideCreateInput();
+          loadLists();
+        } else if (e.key === 'Escape') {
+          hideCreateInput();
+        }
+      });
+    }
+
+    function showCreateInput() {
+      document.getElementById('createCard').style.display = 'none';
+      const wrap = document.getElementById('createWrap');
+      wrap.classList.add('visible');
+      document.getElementById('createInput').focus();
+    }
+
+    function hideCreateInput() {
+      document.getElementById('createCard').style.display = '';
+      document.getElementById('createWrap').classList.remove('visible');
+    }
+
+    // ---- Open list detail ----
+    async function openList(id) {
+      currentListId = id;
+      const res = await fetch(`/api/lists/${id}`);
+      const data = await res.json();
+      currentListItems = data.items || [];
+
+      document.getElementById('allListsView').style.display = 'none';
+      document.getElementById('detailView').style.display = 'block';
+      document.getElementById('detailName').textContent = data.name;
+
+      renderDetail();
+    }
+
+    function renderDetail() {
+      const grid = document.getElementById('detailGrid');
+      const empty = document.getElementById('detailEmpty');
+
+      if (currentListItems.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+        return;
+      }
+
+      grid.style.display = 'grid';
+      empty.style.display = 'none';
+
+      grid.innerHTML = currentListItems.map((item, idx) => {
+        const thumb = thumbUrl(item.thumbnail_path);
+        const num = item.issue_number != null ? '#' + item.issue_number : '';
+        return `
+          <div class="card" draggable="true" data-issue-id="${item.issue_id}" data-index="${idx}">
+            <button class="remove-item-btn" onclick="event.preventDefault(); event.stopPropagation(); removeItem(${item.issue_id})" title="Remove from list">&#10005;</button>
+            <a href="/reader.html?id=${item.issue_id}" class="card-link">
+              <div class="card-img-wrap">
+                ${thumb
+                  ? `<img src="${thumb}" alt="${esc(item.title)}" loading="lazy">`
+                  : `<div class="card-placeholder">&#128214;</div>`}
+              </div>
+            </a>
+            <div class="card-info">
+              <h3 title="${esc(item.title)}">${num || esc(item.title)}</h3>
+              <span class="meta">${esc(item.series_name)}</span>
+            </div>
+          </div>`;
+      }).join('');
+
+      initDragAndDrop();
+    }
+
+    // ---- Drag & drop reorder ----
+    function initDragAndDrop() {
+      const grid = document.getElementById('detailGrid');
+      let draggedEl = null;
+
+      grid.querySelectorAll('.card[draggable]').forEach(card => {
+        card.addEventListener('dragstart', (e) => {
+          draggedEl = card;
+          card.classList.add('dragging');
+          e.dataTransfer.effectAllowed = 'move';
+          e.dataTransfer.setData('text/plain', card.dataset.issueId);
+        });
+
+        card.addEventListener('dragend', () => {
+          card.classList.remove('dragging');
+          grid.querySelectorAll('.card').forEach(c => c.classList.remove('drag-over'));
+          draggedEl = null;
+        });
+
+        card.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'move';
+          if (card !== draggedEl) {
+            card.classList.add('drag-over');
+          }
+        });
+
+        card.addEventListener('dragleave', () => {
+          card.classList.remove('drag-over');
+        });
+
+        card.addEventListener('drop', async (e) => {
+          e.preventDefault();
+          card.classList.remove('drag-over');
+          if (!draggedEl || card === draggedEl) return;
+
+          const fromIdx = parseInt(draggedEl.dataset.index);
+          const toIdx = parseInt(card.dataset.index);
+
+          // Reorder the items array
+          const moved = currentListItems.splice(fromIdx, 1)[0];
+          currentListItems.splice(toIdx, 0, moved);
+
+          renderDetail();
+
+          // Save new order to server
+          const issueIds = currentListItems.map(i => i.issue_id);
+          await fetch(`/api/lists/${currentListId}/reorder`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ issue_ids: issueIds }),
+          });
+        });
+      });
+    }
+
+    // ---- Remove item ----
+    async function removeItem(issueId) {
+      await fetch(`/api/lists/${currentListId}/items/${issueId}`, { method: 'DELETE' });
+      currentListItems = currentListItems.filter(i => i.issue_id !== issueId);
+      renderDetail();
+    }
+
+    // ---- Back to all lists ----
+    document.getElementById('backToLists').addEventListener('click', () => {
+      document.getElementById('detailView').style.display = 'none';
+      document.getElementById('allListsView').style.display = 'block';
+      currentListId = null;
+      loadLists();
+    });
+
+    // ---- Rename ----
+    function promptRename(id, currentName) {
+      currentListId = id;
+      document.getElementById('renameInput').value = currentName;
+      document.getElementById('renameOverlay').classList.add('visible');
+      document.getElementById('renameInput').focus();
+      document.getElementById('renameInput').select();
+    }
+
+    document.getElementById('renameCancelBtn').addEventListener('click', () => {
+      document.getElementById('renameOverlay').classList.remove('visible');
+    });
+
+    document.getElementById('renameOverlay').addEventListener('click', (e) => {
+      if (e.target === e.currentTarget) document.getElementById('renameOverlay').classList.remove('visible');
+    });
+
+    document.getElementById('renameInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') document.getElementById('renameSaveBtn').click();
+      if (e.key === 'Escape') document.getElementById('renameOverlay').classList.remove('visible');
+    });
+
+    document.getElementById('renameSaveBtn').addEventListener('click', async () => {
+      const name = document.getElementById('renameInput').value.trim();
+      if (!name) return;
+
+      await fetch(`/api/lists/${currentListId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name }),
+      });
+
+      document.getElementById('renameOverlay').classList.remove('visible');
+
+      // If in detail view, update title
+      if (document.getElementById('detailView').style.display !== 'none') {
+        document.getElementById('detailName').textContent = name;
+      }
+      loadLists();
+    });
+
+    // ---- Rename from detail view ----
+    document.getElementById('renameListBtn').addEventListener('click', () => {
+      const name = document.getElementById('detailName').textContent;
+      promptRename(currentListId, name);
+    });
+
+    // ---- Delete ----
+    async function deleteList(id, name) {
+      if (!confirm(`Delete list "${name}"? This cannot be undone.`)) return;
+      await fetch(`/api/lists/${id}`, { method: 'DELETE' });
+      loadLists();
+    }
+
+    document.getElementById('deleteListBtn').addEventListener('click', () => {
+      const name = document.getElementById('detailName').textContent;
+      if (!confirm(`Delete list "${name}"? This cannot be undone.`)) return;
+      fetch(`/api/lists/${currentListId}`, { method: 'DELETE' }).then(() => {
+        document.getElementById('detailView').style.display = 'none';
+        document.getElementById('allListsView').style.display = 'block';
+        currentListId = null;
+        loadLists();
+      });
+    });
+
+    // ---- Navbar user ----
+    fetch('/api/auth/me').then(r => r.json()).then(user => {
+      if (user.authenticated) {
+        if (user.isAdmin) document.getElementById('adminLink').style.display = '';
+        document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
+        document.getElementById('profileName').textContent = user.username;
+      } else {
+        window.location.href = '/login.html';
+      }
+    }).catch(() => {});
+
+    loadLists();
+  </script>
+<footer class="site-footer">
+  <div>&copy; 2026 <a href="https://outmaneuver.cargo.site/" target="_blank" rel="noopener">Outmaneuver</a></div>
+  <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Outmaneuver" data-color="#101010" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#ffffff" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+</footer>
+</body>
+</html>
