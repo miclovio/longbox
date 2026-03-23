@@ -1,0 +1,16 @@
+services:
+  longbox:
+    build: .
+    container_name: longbox
+    restart: unless-stopped
+    ports:
+      - "3131:3131"
+    volumes:
+      - ./data:/data
+      - /path/to/your/comics:/comics:ro
+    environment:
+      - PORT=3131
+      - COMICS_PATH=/comics
+      - DATA_DIR=/data
+      - SESSION_SECRET=change-me-to-something-random
+      - COMICVINE_API_KEY=your-api-key-here
