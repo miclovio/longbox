@@ -1,5 +1,7 @@
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
+const os = require('os');
 const JSZip = require('jszip');
 
 // Image extensions to include when listing pages
@@ -106,19 +108,73 @@ async function extractCbrPage(filePath, pageIndex) {
 }
 
 /**
+ * Check if system unrar binary is available.
+ */
+let hasSystemUnrar = null;
+function checkSystemUnrar() {
+  if (hasSystemUnrar !== null) return hasSystemUnrar;
+  try {
+    execSync('unrar --version', { stdio: 'ignore' });
+    hasSystemUnrar = true;
+  } catch {
+    hasSystemUnrar = false;
+  }
+  return hasSystemUnrar;
+}
+
+/**
+ * List pages using system unrar binary (handles RAR5 and older formats).
+ */
+function listCbrPagesSystem(filePath) {
+  const output = execSync(`unrar lb "${filePath}"`, { encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 });
+  const pages = output.split('\n').map(l => l.trim()).filter(l => l && isImage(l));
+  pages.sort(naturalSort);
+  return pages;
+}
+
+/**
+ * Extract a page using system unrar binary.
+ */
+function extractCbrPageSystem(filePath, pageIndex) {
+  const pages = listCbrPagesSystem(filePath);
+  if (pageIndex < 0 || pageIndex >= pages.length) return null;
+
+  const targetFile = pages[pageIndex];
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'longbox-'));
+
+  try {
+    execSync(`unrar e -o+ "${filePath}" "${targetFile}" "${tmpDir}/"`, { stdio: 'ignore', maxBuffer: 50 * 1024 * 1024 });
+    const extractedPath = path.join(tmpDir, path.basename(targetFile));
+    if (fs.existsSync(extractedPath)) {
+      const buffer = fs.readFileSync(extractedPath);
+      return { buffer, filename: path.basename(targetFile) };
+    }
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+  return null;
+}
+
+/**
  * Detect format and list pages.
- * Falls back to the other format if the primary one fails
- * (handles mislabeled .cbr files that are actually ZIPs and vice versa).
+ * Falls back to the other format if the primary one fails,
+ * then tries system unrar as a last resort.
  */
 async function listPages(filePath) {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.cbz' || ext === '.zip') {
     try { return await listCbzPages(filePath); } catch (e) {
-      return listCbrPages(filePath);
+      try { return await listCbrPages(filePath); } catch (e2) {
+        if (checkSystemUnrar()) return listCbrPagesSystem(filePath);
+        throw e;
+      }
     }
   } else if (ext === '.cbr' || ext === '.rar') {
     try { return await listCbrPages(filePath); } catch (e) {
-      return listCbzPages(filePath);
+      try { return await listCbzPages(filePath); } catch (e2) {
+        if (checkSystemUnrar()) return listCbrPagesSystem(filePath);
+        throw e;
+      }
     }
   }
   throw new Error(`Unsupported format: ${ext}`);
@@ -126,17 +182,24 @@ async function listPages(filePath) {
 
 /**
  * Detect format and extract a page.
- * Falls back to the other format if the primary one fails.
+ * Falls back to the other format if the primary one fails,
+ * then tries system unrar as a last resort.
  */
 async function extractPage(filePath, pageIndex) {
   const ext = path.extname(filePath).toLowerCase();
   if (ext === '.cbz' || ext === '.zip') {
     try { return await extractCbzPage(filePath, pageIndex); } catch (e) {
-      return extractCbrPage(filePath, pageIndex);
+      try { return await extractCbrPage(filePath, pageIndex); } catch (e2) {
+        if (checkSystemUnrar()) return extractCbrPageSystem(filePath, pageIndex);
+        throw e;
+      }
     }
   } else if (ext === '.cbr' || ext === '.rar') {
     try { return await extractCbrPage(filePath, pageIndex); } catch (e) {
-      return extractCbzPage(filePath, pageIndex);
+      try { return await extractCbzPage(filePath, pageIndex); } catch (e2) {
+        if (checkSystemUnrar()) return extractCbrPageSystem(filePath, pageIndex);
+        throw e;
+      }
     }
   }
   throw new Error(`Unsupported format: ${ext}`);

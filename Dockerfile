@@ -1,10 +1,11 @@
 FROM node:20-slim
 
-# Install native dependencies for sharp and better-sqlite3
+# Install native dependencies for sharp, better-sqlite3, and unrar for RAR5 support
 RUN apt-get update && apt-get install -y \
     python3 \
     make \
     g++ \
+    unrar-free \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
