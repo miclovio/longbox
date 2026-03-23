@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Longbox</title>
   <link rel="stylesheet" href="/css/style.css">
   <style>
@@ -613,7 +613,7 @@
           ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(issue.title)}" loading="lazy">` : `<div class="sc-placeholder">&#128214;</div>`}
           ${issue.current_page != null && issue.page_count ? `<div class="sc-progress-bar"><div class="sc-progress-fill" style="width:${Math.round((issue.current_page / issue.page_count) * 100)}%"></div></div>` : ''}
           <div class="sc-info">
-            <h4 title="${esc(issue.title)}">${esc(issue.title)}</h4>
+            <h4 title="${esc(issue.title)}">${issue.issue_number != null ? '#' + issue.issue_number : esc(issue.title)}</h4>
             <span class="sc-meta">${extra || ''}</span>
           </div>
         </a>`;
@@ -657,7 +657,7 @@
 
         document.getElementById('continueSection').style.display = 'block';
         document.getElementById('continueRow').innerHTML = inProgress.slice(0, 20).map(p =>
-          scrollCardIssue(p, `${esc(p.series_name)} &middot; ${Math.round((p.current_page / p.page_count) * 100)}%`)
+          scrollCardIssue(p, `${esc(p.series_name)}`)
         ).join('');
       } catch (e) {}
     }
