@@ -146,15 +146,21 @@ router.get('/progress/summary', (req, res) => {
     issues[p.issue_id] = { currentPage: p.current_page, isRead: p.is_read === 1 };
   }
 
-  // Per-series: count read vs total
+  // Per-series: count read vs total (grouped by issue_number to exclude variant duplicates)
   const seriesStats = db.prepare(`
-    SELECT s.id as series_id, s.issue_count as total,
-      COUNT(rp.id) as started,
-      SUM(CASE WHEN rp.is_read = 1 THEN 1 ELSE 0 END) as read
-    FROM series s
-    LEFT JOIN issues i ON i.series_id = s.id
-    LEFT JOIN reading_progress rp ON rp.issue_id = i.id AND rp.user_id = ?
-    GROUP BY s.id
+    SELECT series_id, COUNT(*) as total,
+      SUM(CASE WHEN grp_read > 0 THEN 1 ELSE 0 END) as read,
+      SUM(CASE WHEN grp_started > 0 THEN 1 ELSE 0 END) as started
+    FROM (
+      SELECT i.series_id,
+        COALESCE(i.issue_number, i.id) as grp_key,
+        MAX(CASE WHEN rp.is_read = 1 THEN 1 ELSE 0 END) as grp_read,
+        MAX(CASE WHEN rp.id IS NOT NULL THEN 1 ELSE 0 END) as grp_started
+      FROM issues i
+      LEFT JOIN reading_progress rp ON rp.issue_id = i.id AND rp.user_id = ?
+      GROUP BY i.series_id, grp_key
+    )
+    GROUP BY series_id
   `).all(userId);
 
   const series = {};
@@ -205,6 +211,28 @@ router.post('/progress/:issueId', (req, res) => {
       is_read = COALESCE(?, is_read),
       updated_at = datetime('now')
   `).run(userId, issueId, current_page || 0, is_read ? 1 : 0, current_page, is_read != null ? (is_read ? 1 : 0) : null);
+
+  // Propagate read status to variant issues (same series + issue_number)
+  if (is_read != null) {
+    const issue = db.prepare('SELECT series_id, issue_number FROM issues WHERE id = ?').get(issueId);
+    if (issue && issue.issue_number != null) {
+      const variants = db.prepare(
+        'SELECT id FROM issues WHERE series_id = ? AND issue_number = ? AND id != ?'
+      ).all(issue.series_id, issue.issue_number, issueId);
+
+      const stmt = db.prepare(`
+        INSERT INTO reading_progress (user_id, issue_id, current_page, is_read, updated_at)
+        VALUES (?, ?, 0, ?, datetime('now'))
+        ON CONFLICT(user_id, issue_id) DO UPDATE SET
+          is_read = ?,
+          updated_at = datetime('now')
+      `);
+      const readVal = is_read ? 1 : 0;
+      for (const v of variants) {
+        stmt.run(userId, v.id, readVal, readVal);
+      }
+    }
+  }
 
   res.json({ ok: true });
 });
