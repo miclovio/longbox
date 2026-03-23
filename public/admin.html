@@ -204,7 +204,11 @@
 
     <!-- Row 3: Unmatched Series full width, no scroll -->
     <div class="admin-card" style="margin-top:1.25rem;">
-      <h3>Unmatched Series <span id="unmatchedCount" style="color:var(--text-muted);font-weight:400;font-size:0.85rem;"></span></h3>
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;">
+        <h3 style="margin:0;">Unmatched Series <span id="unmatchedCount" style="color:var(--text-muted);font-weight:400;font-size:0.85rem;"></span></h3>
+        <button id="matchAllBtn" class="btn-sm" style="border-color:var(--accent);color:var(--accent);display:none;" onclick="matchAll()">Match All</button>
+      </div>
+      <div id="matchAllLog" style="display:none;background:#181818;border-radius:6px;padding:0.75rem;margin-top:0.75rem;max-height:200px;overflow-y:auto;font-size:0.78rem;font-family:monospace;white-space:pre-wrap;color:var(--text-muted);"></div>
       <div id="unmatchedList">Loading...</div>
     </div>
   </div>
@@ -245,15 +249,64 @@
 
       if (list.length === 0) {
         el.innerHTML = '<p style="color:#27ae60;font-size:0.82rem;">All series matched!</p>';
+        document.getElementById('matchAllBtn').style.display = 'none';
         return;
       }
 
+      document.getElementById('matchAllBtn').style.display = 'inline-flex';
       el.innerHTML = list.map(s => `
         <div class="unmatched-item">
           <span>${s.name} <span style="color:var(--text-muted);">(${s.issue_count})</span></span>
           <a href="/series.html?id=${s.id}" class="btn-sm" style="border-color:var(--accent);color:var(--accent);">Match</a>
         </div>
       `).join('');
+    }
+
+    async function matchAll() {
+      const btn = document.getElementById('matchAllBtn');
+      const log = document.getElementById('matchAllLog');
+      btn.disabled = true;
+      btn.textContent = 'Matching...';
+      log.style.display = 'block';
+      log.textContent = 'Starting auto-match for all unmatched series...\n';
+
+      try {
+        const res = await fetch('/api/comicvine/auto-match-all', { method: 'POST' });
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          const lines = buffer.split('\n');
+          buffer = lines.pop();
+
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const evt = JSON.parse(line.slice(6));
+
+            if (evt.type === 'match') {
+              log.textContent += `[${evt.current}/${evt.total}] ${evt.series} -> ${evt.volume} (${evt.publisher || 'Unknown'})\n`;
+            } else if (evt.type === 'skip') {
+              log.textContent += `[${evt.current}/${evt.total}] ${evt.series} — skipped: ${evt.reason}\n`;
+            } else if (evt.type === 'error') {
+              log.textContent += `[${evt.current}/${evt.total}] ${evt.series} — error: ${evt.reason}\n`;
+            } else if (evt.type === 'done') {
+              log.textContent += `\nDone! Matched: ${evt.matched}, Failed: ${evt.failed}, Total: ${evt.total}\n`;
+            }
+            log.scrollTop = log.scrollHeight;
+          }
+        }
+      } catch (err) {
+        log.textContent += `Error: ${err.message}\n`;
+      }
+
+      btn.disabled = false;
+      btn.textContent = 'Match All';
+      loadUnmatched();
     }
 
     async function triggerScan() {

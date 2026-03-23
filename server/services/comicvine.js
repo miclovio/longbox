@@ -16,7 +16,7 @@ const USER_AGENT = 'Longbox/1.0';
 
 // Simple in-memory rate limiter
 let requestTimestamps = [];
-const MAX_REQUESTS_PER_MINUTE = 10; // Stay well under the 200/hour limit
+const MAX_REQUESTS_PER_MINUTE = 50; // 200/hour limit = ~3.3/sec; 50/min is safe with headroom
 
 function getApiKey() {
   const key = process.env.COMICVINE_API_KEY;

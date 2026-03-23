@@ -77,9 +77,9 @@ async function scanLibrary(comicsPath, progressCallback) {
   const entries = fs.readdirSync(comicsPath, { withFileTypes: true });
   const totalFolders = entries.filter(e => e.isDirectory()).length;
 
-  // Also check for loose comic files in the root
+  // Also check for loose comic files in the root (skip macOS ._ metadata files)
   const rootFiles = entries.filter(e =>
-    e.isFile() && COMIC_EXTENSIONS.has(path.extname(e.name).toLowerCase())
+    e.isFile() && !e.name.startsWith('._') && COMIC_EXTENSIONS.has(path.extname(e.name).toLowerCase())
   );
 
   let processed = 0;
@@ -96,23 +96,50 @@ async function scanLibrary(comicsPath, progressCallback) {
     }
   }
 
-  // Scan each subfolder as a series
+  // Scan each subfolder as a series (with nested subfolder support)
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
 
     const seriesPath = path.join(comicsPath, entry.name);
-    const seriesName = cleanSeriesName(entry.name);
 
-    // Find all comic files in this folder (including subdirectories)
-    const comicFiles = findComicFiles(seriesPath);
+    // Check for subfolders inside this folder
+    const subEntries = fs.readdirSync(seriesPath, { withFileTypes: true });
+    const subFolders = subEntries.filter(e => e.isDirectory());
+    const looseFiles = subEntries.filter(e =>
+      e.isFile() && !e.name.startsWith('._') && COMIC_EXTENSIONS.has(path.extname(e.name).toLowerCase())
+    );
 
-    if (comicFiles.length === 0) continue;
+    if (subFolders.length > 0) {
+      // Has subfolders — treat each subfolder as its own series
+      // Loose files in the parent folder also become a series
+      if (looseFiles.length > 0) {
+        const seriesName = cleanSeriesName(entry.name);
+        const files = looseFiles.map(f => path.join(seriesPath, f.name));
+        await scanSeriesFolder(db, seriesPath, seriesName, seriesPath, thumbDir, files, stats);
+      }
 
-    await scanSeriesFolder(db, seriesPath, seriesName, seriesPath, thumbDir, comicFiles, stats);
+      for (const sub of subFolders) {
+        const subPath = path.join(seriesPath, sub.name);
+        const subName = cleanSeriesName(sub.name);
+        const comicFiles = findComicFiles(subPath);
+
+        if (comicFiles.length === 0) continue;
+
+        await scanSeriesFolder(db, subPath, subName, subPath, thumbDir, comicFiles, stats);
+      }
+    } else {
+      // No subfolders — this folder is a single series (original behavior)
+      const seriesName = cleanSeriesName(entry.name);
+      const comicFiles = findComicFiles(seriesPath);
+
+      if (comicFiles.length === 0) continue;
+
+      await scanSeriesFolder(db, seriesPath, seriesName, seriesPath, thumbDir, comicFiles, stats);
+    }
 
     processed++;
     if (progressCallback) {
-      progressCallback({ processed, total: totalFolders, seriesName });
+      progressCallback({ processed, total: totalFolders, seriesName: cleanSeriesName(entry.name) });
     }
   }
 
@@ -134,7 +161,7 @@ function findComicFiles(dirPath) {
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
         walk(fullPath);
-      } else if (COMIC_EXTENSIONS.has(path.extname(entry.name).toLowerCase())) {
+      } else if (COMIC_EXTENSIONS.has(path.extname(entry.name).toLowerCase()) && !entry.name.startsWith('._')) {
         files.push(fullPath);
       }
     }
@@ -146,13 +173,25 @@ function findComicFiles(dirPath) {
 }
 
 async function scanSeriesFolder(db, basePath, seriesName, seriesPath, thumbDir, comicFiles, stats) {
-  // Upsert series
-  let series = db.prepare('SELECT * FROM series WHERE folder_path = ?').get(seriesPath);
+  // Normalize path for consistent lookup (Windows slash differences)
+  const normalizedPath = path.resolve(seriesPath);
+
+  // Upsert series — try normalized path first, fall back to LIKE for legacy slash mismatches
+  let series = db.prepare('SELECT * FROM series WHERE folder_path = ?').get(normalizedPath);
+  if (!series) {
+    // Check for same path stored with different slashes
+    const altPath = normalizedPath.replace(/\\/g, '/');
+    series = db.prepare('SELECT * FROM series WHERE folder_path = ? OR folder_path = ?').get(altPath, normalizedPath);
+    if (series) {
+      // Fix the stored path to the normalized form
+      db.prepare('UPDATE series SET folder_path = ? WHERE id = ?').run(normalizedPath, series.id);
+    }
+  }
 
   if (!series) {
     const result = db.prepare('INSERT INTO series (name, folder_path) VALUES (?, ?)')
-      .run(seriesName, seriesPath);
-    series = { id: result.lastInsertRowid, name: seriesName, folder_path: seriesPath };
+      .run(seriesName, normalizedPath);
+    series = { id: result.lastInsertRowid, name: seriesName, folder_path: normalizedPath };
     stats.seriesAdded++;
   }
 
@@ -160,12 +199,20 @@ async function scanSeriesFolder(db, basePath, seriesName, seriesPath, thumbDir, 
 
   for (const filePath of comicFiles) {
     // Normalize: if filePath is just a filename, join with basePath
-    const fullPath = path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath);
+    const fullPath = path.resolve(path.isAbsolute(filePath) ? filePath : path.join(basePath, filePath));
     const filename = path.basename(fullPath);
 
     try {
       const fileStat = fs.statSync(fullPath);
-      const existing = db.prepare('SELECT * FROM issues WHERE file_path = ?').get(fullPath);
+      // Check normalized path and alternate slash form for legacy entries
+      const altFullPath = fullPath.replace(/\\/g, '/');
+      let existing = db.prepare('SELECT * FROM issues WHERE file_path = ?').get(fullPath);
+      if (!existing) {
+        existing = db.prepare('SELECT * FROM issues WHERE file_path = ?').get(altFullPath);
+        if (existing) {
+          db.prepare('UPDATE issues SET file_path = ? WHERE id = ?').run(fullPath, existing.id);
+        }
+      }
 
       if (existing) {
         // Update if file size changed (re-scan)
@@ -239,6 +286,30 @@ function cleanupMissing(db) {
     const placeholders = removedIssueIds.map(() => '?').join(',');
     db.prepare(`DELETE FROM issues WHERE id IN (${placeholders})`).run(...removedIssueIds);
     console.log(`Cleaned up ${removedIssueIds.length} missing issues`);
+  }
+
+  // Merge duplicate series (same normalized folder_path with different slashes)
+  const allSeries = db.prepare('SELECT * FROM series ORDER BY id').all();
+  const pathMap = new Map();
+  for (const s of allSeries) {
+    const norm = path.resolve(s.folder_path);
+    if (pathMap.has(norm)) {
+      const keeper = pathMap.get(norm);
+      // Prefer the one with comicvine_id
+      const [keep, remove] = keeper.comicvine_id ? [keeper, s] : (s.comicvine_id ? [s, keeper] : [keeper, s]);
+      if (keep !== keeper) pathMap.set(norm, keep);
+      // Move issues from duplicate to keeper
+      db.prepare('UPDATE issues SET series_id = ? WHERE series_id = ?').run(keep.id, remove.id);
+      // Copy metadata if keeper is missing it
+      if (!keep.comicvine_id && remove.comicvine_id) {
+        db.prepare('UPDATE series SET comicvine_id = ?, description = ?, publisher = ?, start_year = ? WHERE id = ?')
+          .run(remove.comicvine_id, remove.description, remove.publisher, remove.start_year, keep.id);
+      }
+      db.prepare('DELETE FROM series WHERE id = ?').run(remove.id);
+      console.log(`Merged duplicate series: "${remove.name}" (id=${remove.id}) into "${keep.name}" (id=${keep.id})`);
+    } else {
+      pathMap.set(norm, s);
+    }
   }
 
   // Remove empty series

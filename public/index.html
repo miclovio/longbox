@@ -447,6 +447,13 @@
           <h2>Reading Lists</h2>
           <button class="btn btn-primary" onclick="createNewList()">New List</button>
         </div>
+        <div id="newListForm" style="display:none;margin:0.75rem 0;">
+          <div style="display:flex;gap:0.5rem;align-items:center;max-width:400px;">
+            <input type="text" id="newListInput" placeholder="List name" style="flex:1;padding:0.5rem 0.75rem;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#fff;font-size:0.9rem;">
+            <button class="btn btn-primary" onclick="submitNewList()">Create</button>
+            <button class="btn" onclick="document.getElementById('newListForm').style.display='none';" style="border-color:#555;color:#aaa;">Cancel</button>
+          </div>
+        </div>
         <div class="grid" id="listsGrid"></div>
         <div class="empty-state" id="listsEmpty" style="display:none;">
           <h2>No reading lists yet</h2>
@@ -458,6 +465,13 @@
         <div class="list-detail-header">
           <span class="back-link" onclick="showListsOverview()">&#8592;</span>
           <h2 id="listDetailName" style="font-size:1.1rem;"></h2>
+          <div id="renameListForm" style="display:none;">
+            <div style="display:flex;gap:0.5rem;align-items:center;">
+              <input type="text" id="renameListInput" placeholder="New name" style="padding:0.4rem 0.6rem;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#fff;font-size:0.85rem;">
+              <button class="btn btn-primary" style="padding:0.4rem 0.75rem;font-size:0.8rem;" onclick="submitRenameList()">Save</button>
+              <button class="btn" style="padding:0.4rem 0.75rem;font-size:0.8rem;border-color:#555;color:#aaa;" onclick="document.getElementById('renameListForm').style.display='none';">Cancel</button>
+            </div>
+          </div>
           <div class="list-detail-actions">
             <button class="btn btn-secondary" onclick="renameCurrentList()">Rename</button>
             <button class="btn btn-secondary" style="color:#e74c3c;" onclick="deleteCurrentList()">Delete</button>
@@ -487,13 +501,17 @@
       <div class="grid" id="profileReading" style="margin-bottom:2rem;"></div>
       <div id="profileReadingEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No issues in progress.</div>
 
+      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Reading Lists</h3>
+      <div class="grid" id="profileLists" style="margin-bottom:2rem;"></div>
+      <div id="profileListsEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No reading lists yet.</div>
+
+      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Bookmarks</h3>
+      <div id="profileBookmarks" style="margin-bottom:2rem;"></div>
+      <div id="profileBookmarksEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No bookmarks yet. Use the star button in the reader to bookmark pages.</div>
+
       <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Completed</h3>
       <div class="grid" id="profileRead" style="margin-bottom:2rem;"></div>
-      <div id="profileReadEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No completed issues yet.</div>
-
-      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Reading Lists</h3>
-      <div class="grid" id="profileLists"></div>
-      <div id="profileListsEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;">No reading lists yet.</div>
+      <div id="profileReadEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;">No completed issues yet.</div>
     </div>
   </div>
 
@@ -577,7 +595,10 @@
       const thumb = thumbUrl(s.thumbnail_path);
       return `
         <a class="scroll-card" href="/series.html?id=${s.id}">
-          ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(s.name)}" loading="lazy">` : `<div class="sc-placeholder">&#128218;</div>`}
+          <div style="position:relative;">
+            ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(s.name)}" loading="lazy">` : `<div class="sc-placeholder">&#128218;</div>`}
+            ${s.issue_count ? `<span class="card-badge">${s.issue_count}</span>` : ''}
+          </div>
           <div class="sc-info">
             <h4 title="${esc(s.name)}">${esc(s.name)}</h4>
             <span class="sc-meta">${s.publisher ? esc(s.publisher) : ''} ${s.start_year ? '&middot; ' + s.start_year : ''}</span>
@@ -611,9 +632,9 @@
         document.getElementById('recentAddedRow').innerHTML = recentAdded.map(scrollCardSeries).join('');
       }
 
-      // Recently Released (by start_year, descending)
-      const withYear = allSeries.filter(s => s.start_year);
-      const recentReleased = [...withYear].sort((a, b) => (b.start_year || '').localeCompare(a.start_year || '')).slice(0, 20);
+      // Recently Released (by latest cover_date from issues, descending)
+      const withDate = allSeries.filter(s => s.latest_cover_date);
+      const recentReleased = [...withDate].sort((a, b) => (b.latest_cover_date || '').localeCompare(a.latest_cover_date || '')).slice(0, 20);
       if (recentReleased.length > 0) {
         document.getElementById('recentReleasedSection').style.display = 'block';
         document.getElementById('recentReleasedRow').innerHTML = recentReleased.map(scrollCardSeries).join('');
@@ -776,23 +797,46 @@
       loadLists();
     }
 
-    async function renameCurrentList() {
+    function renameCurrentList() {
       if (!currentListId) return;
-      const name = prompt('New name:');
-      if (!name || !name.trim()) return;
+      const form = document.getElementById('renameListForm');
+      const input = document.getElementById('renameListInput');
+      input.value = document.getElementById('listDetailName').textContent;
+      form.style.display = 'block';
+      input.focus();
+      input.select();
+    }
+
+    document.getElementById('renameListInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitRenameList();
+      if (e.key === 'Escape') document.getElementById('renameListForm').style.display = 'none';
+    });
+
+    async function submitRenameList() {
+      const input = document.getElementById('renameListInput');
+      const name = input.value.trim();
+      if (!name) { input.focus(); return; }
       await fetch(`/api/lists/${currentListId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
+        body: JSON.stringify({ name }),
       });
-      document.getElementById('listDetailName').textContent = name.trim();
+      document.getElementById('listDetailName').textContent = name;
+      document.getElementById('renameListForm').style.display = 'none';
     }
 
     async function deleteCurrentList() {
       if (!currentListId) return;
-      if (!confirm('Delete this list?')) return;
-      await fetch(`/api/lists/${currentListId}`, { method: 'DELETE' });
-      showListsOverview();
+      // Replace confirm() with inline confirmation
+      const btn = document.querySelector('.list-detail-actions button[style*="e74c3c"]');
+      if (btn.dataset.confirming) {
+        await fetch(`/api/lists/${currentListId}`, { method: 'DELETE' });
+        showListsOverview();
+        return;
+      }
+      btn.dataset.confirming = 'true';
+      btn.textContent = 'Confirm Delete';
+      setTimeout(() => { btn.textContent = 'Delete'; delete btn.dataset.confirming; }, 3000);
     }
 
     async function removeFromList(listId, issueId) {
@@ -800,22 +844,43 @@
       openListDetail(listId);
     }
 
-    async function createNewList() {
-      const name = prompt('List name:');
-      if (!name || !name.trim()) return;
-      await fetch('/api/lists', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: name.trim() }),
-      });
-      loadLists();
+    function createNewList() {
+      const form = document.getElementById('newListForm');
+      const input = document.getElementById('newListInput');
+      form.style.display = 'block';
+      input.value = '';
+      input.focus();
+    }
+
+    document.getElementById('newListInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') submitNewList();
+      if (e.key === 'Escape') document.getElementById('newListForm').style.display = 'none';
+    });
+
+    async function submitNewList() {
+      const input = document.getElementById('newListInput');
+      const name = input.value.trim();
+      if (!name) { input.focus(); return; }
+      try {
+        const res = await fetch('/api/lists', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name }),
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          input.style.borderColor = '#e74c3c';
+          return;
+        }
+        document.getElementById('newListForm').style.display = 'none';
+        await loadLists(true);
+      } catch (e) {
+        input.style.borderColor = '#e74c3c';
+      }
     }
 
     // ---- Profile Tab ----
-    let profileLoaded = false;
     async function loadProfile() {
-      if (profileLoaded) return;
-      profileLoaded = true;
       try {
         const res = await fetch('/api/auth/me');
         const user = await res.json();
@@ -899,7 +964,45 @@
           listsGrid.style.display = 'none';
           listsEmpty.style.display = 'block';
         }
-      } catch (e) {}
+
+        // Load bookmarks
+        const bkRes = await fetch('/api/bookmarks');
+        const bookmarks = await bkRes.json();
+        const bkList = document.getElementById('profileBookmarks');
+        const bkEmpty = document.getElementById('profileBookmarksEmpty');
+
+        if (bookmarks.length > 0) {
+          bkList.style.display = 'block';
+          bkEmpty.style.display = 'none';
+          bkList.innerHTML = bookmarks.map(b => {
+            const thumb = b.thumbnail_path ? `/api/thumbnails/${b.thumbnail_path}` : '';
+            const coverHtml = thumb
+              ? `<img src="${esc(thumb)}" alt="${esc(b.issue_title)}" style="width:45px;height:68px;object-fit:cover;border-radius:3px;flex-shrink:0;">`
+              : `<div style="width:45px;height:68px;background:var(--bg-card);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--text-muted);flex-shrink:0;">&#128214;</div>`;
+            return `
+              <div style="display:flex;align-items:center;gap:1rem;padding:0.75rem;background:var(--bg-secondary);border-radius:var(--radius);margin-bottom:0.5rem;">
+                ${coverHtml}
+                <div style="flex:1;min-width:0;">
+                  <div style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(b.series_name)} - ${esc(b.issue_title)}</div>
+                  <div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.15rem;">Page ${b.page_number + 1}</div>
+                  ${b.note ? `<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.25rem;font-style:italic;">${esc(b.note)}</div>` : ''}
+                </div>
+                <div style="display:flex;gap:0.5rem;align-items:center;flex-shrink:0;">
+                  <a href="/reader.html?id=${b.issue_id}&page=${b.page_number}" class="btn btn-primary" style="font-size:0.75rem;padding:0.3rem 0.7rem;">Jump to Page</a>
+                  <button onclick="removeProfileBookmark(${b.id})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:0.2rem;border-radius:4px;" title="Remove bookmark">&#10005;</button>
+                </div>
+              </div>`;
+          }).join('');
+        } else {
+          bkList.style.display = 'none';
+          bkEmpty.style.display = 'block';
+        }
+      } catch (e) { console.error('Profile load error:', e); }
+    }
+
+    async function removeProfileBookmark(id) {
+      await fetch(`/api/bookmarks/${id}`, { method: 'DELETE' });
+      loadProfile();
     }
 
     async function logout() {

@@ -37,6 +37,9 @@ router.post('/register', async (req, res) => {
   const result = db.prepare('INSERT INTO users (username, password_hash, is_admin) VALUES (?, ?, ?)')
     .run(username, hash, isAdmin);
 
+  // Create default reading list
+  db.prepare('INSERT INTO reading_lists (user_id, name) VALUES (?, ?)').run(result.lastInsertRowid, 'Want to Read');
+
   // Auto-login after registration
   req.session.userId = result.lastInsertRowid;
   req.session.username = username;
@@ -68,6 +71,12 @@ router.post('/login', async (req, res) => {
   const match = await bcrypt.compare(password, user.password_hash);
   if (!match) {
     return res.status(401).json({ error: 'Invalid username or password' });
+  }
+
+  // Ensure default reading list exists
+  const hasLists = db.prepare('SELECT COUNT(*) as c FROM reading_lists WHERE user_id = ?').get(user.id).c;
+  if (hasLists === 0) {
+    db.prepare('INSERT INTO reading_lists (user_id, name) VALUES (?, ?)').run(user.id, 'Want to Read');
   }
 
   req.session.userId = user.id;
@@ -105,7 +114,7 @@ router.get('/me', (req, res) => {
   // Get reading stats
   const stats = db.prepare(`
     SELECT
-      COUNT(*) as issues_read,
+      SUM(CASE WHEN current_page > 0 OR is_read = 1 THEN 1 ELSE 0 END) as started,
       SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) as completed
     FROM reading_progress WHERE user_id = ?
   `).get(user.id);
@@ -117,7 +126,7 @@ router.get('/me', (req, res) => {
     isAdmin: user.is_admin === 1,
     createdAt: user.created_at,
     stats: {
-      issuesStarted: stats.issues_read || 0,
+      issuesStarted: stats.started || 0,
       issuesCompleted: stats.completed || 0,
     },
   });

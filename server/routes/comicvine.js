@@ -119,4 +119,41 @@ router.post('/auto-match/:seriesId', async (req, res) => {
   }
 });
 
+// POST /api/comicvine/auto-match-all — auto-match all unmatched series (streams progress via SSE)
+router.post('/auto-match-all', async (req, res) => {
+  const db = getDb();
+  const unmatched = db.prepare('SELECT id, name FROM series WHERE comicvine_id IS NULL ORDER BY name').all();
+
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    'Connection': 'keep-alive',
+  });
+
+  let matched = 0;
+  let failed = 0;
+
+  for (let idx = 0; idx < unmatched.length; idx++) {
+    const series = unmatched[idx];
+    try {
+      const results = await searchVolumes(series.name, 5);
+      if (results.length > 0) {
+        const best = results[0];
+        await matchSeries(series.id, best.comicvine_id);
+        matched++;
+        res.write(`data: ${JSON.stringify({ type: 'match', series: series.name, volume: best.name, publisher: best.publisher, current: idx + 1, total: unmatched.length })}\n\n`);
+      } else {
+        failed++;
+        res.write(`data: ${JSON.stringify({ type: 'skip', series: series.name, reason: 'No results', current: idx + 1, total: unmatched.length })}\n\n`);
+      }
+    } catch (err) {
+      failed++;
+      res.write(`data: ${JSON.stringify({ type: 'error', series: series.name, reason: err.message, current: idx + 1, total: unmatched.length })}\n\n`);
+    }
+  }
+
+  res.write(`data: ${JSON.stringify({ type: 'done', matched, failed, total: unmatched.length })}\n\n`);
+  res.end();
+});
+
 module.exports = router;

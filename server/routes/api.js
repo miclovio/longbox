@@ -15,15 +15,15 @@ router.get('/series', (req, res) => {
   const sortCol = validSorts.includes(sort) ? sort : 'name';
   const sortOrder = order === 'desc' ? 'DESC' : 'ASC';
 
-  let query = `SELECT * FROM series`;
+  let query = `SELECT s.*, (SELECT MAX(i.cover_date) FROM issues i WHERE i.series_id = s.id AND i.cover_date IS NOT NULL) as latest_cover_date FROM series s`;
   const params = [];
 
   if (search) {
-    query += ` WHERE name LIKE ?`;
+    query += ` WHERE s.name LIKE ?`;
     params.push(`%${search}%`);
   }
 
-  query += ` ORDER BY ${sortCol} ${sortOrder}`;
+  query += ` ORDER BY s.${sortCol} ${sortOrder}`;
 
   const series = db.prepare(query).all(...params);
   res.json(series);
@@ -220,16 +220,37 @@ router.post('/progress/:issueId', (req, res) => {
         'SELECT id FROM issues WHERE series_id = ? AND issue_number = ? AND id != ?'
       ).all(issue.series_id, issue.issue_number, issueId);
 
-      const stmt = db.prepare(`
-        INSERT INTO reading_progress (user_id, issue_id, current_page, is_read, updated_at)
-        VALUES (?, ?, 0, ?, datetime('now'))
-        ON CONFLICT(user_id, issue_id) DO UPDATE SET
-          is_read = ?,
-          updated_at = datetime('now')
-      `);
       const readVal = is_read ? 1 : 0;
-      for (const v of variants) {
-        stmt.run(userId, v.id, readVal, readVal);
+      if (!is_read) {
+        // When unchecking, remove progress rows where user never actually read pages
+        db.prepare(
+          'DELETE FROM reading_progress WHERE user_id = ? AND issue_id = ? AND current_page = 0'
+        ).run(userId, issueId);
+        for (const v of variants) {
+          db.prepare(
+            'DELETE FROM reading_progress WHERE user_id = ? AND issue_id = ? AND current_page = 0'
+          ).run(userId, v.id);
+        }
+        // For rows where user did read pages, just clear is_read
+        db.prepare(
+          'UPDATE reading_progress SET is_read = 0, updated_at = datetime(\'now\') WHERE user_id = ? AND issue_id = ? AND current_page > 0'
+        ).run(userId, issueId);
+        for (const v of variants) {
+          db.prepare(
+            'UPDATE reading_progress SET is_read = 0, updated_at = datetime(\'now\') WHERE user_id = ? AND issue_id = ? AND current_page > 0'
+          ).run(userId, v.id);
+        }
+      } else {
+        const stmt = db.prepare(`
+          INSERT INTO reading_progress (user_id, issue_id, current_page, is_read, updated_at)
+          VALUES (?, ?, 0, ?, datetime('now'))
+          ON CONFLICT(user_id, issue_id) DO UPDATE SET
+            is_read = ?,
+            updated_at = datetime('now')
+        `);
+        for (const v of variants) {
+          stmt.run(userId, v.id, readVal, readVal);
+        }
       }
     }
   }
