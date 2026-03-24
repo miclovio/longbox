@@ -349,6 +349,36 @@ select option {
   color: var(--text-muted);
 }
 
+.card-add-list {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px 0 0 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 1.1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 5;
+  opacity: 0;
+  transition: all 0.2s;
+  padding: 0;
+  line-height: 1;
+}
+
+.card:hover .card-add-list { opacity: 1; }
+.card-add-list:hover { background: var(--accent); color: white; }
+
+@media (max-width: 768px) {
+  .card-add-list { opacity: 0; }
+}
+
 .card-badge {
   position: absolute;
   bottom: 8px;

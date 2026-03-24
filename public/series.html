@@ -126,7 +126,7 @@
     </nav>
     <div class="spacer"></div>
     <div class="search-container">
-      <span class="search-icon">&#128269;</span>
+      <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
       <input type="text" id="searchInput" placeholder="Search issues..." autocomplete="off">
     </div>
     <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
@@ -140,6 +140,10 @@
 
   <!-- Main -->
   <div class="main">
+    <a href="/" onclick="sessionStorage.setItem('active_tab','library');" style="text-decoration:none;display:inline-block;margin-bottom:1rem;">
+      <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Library</div>
+      <div id="breadcrumbMeta" style="font-size:0.7rem;color:var(--text-muted);"></div>
+    </a>
     <!-- Series Header -->
     <div class="series-header" id="seriesHeader" style="display:none;">
       <div class="cover" id="seriesCover"></div>
@@ -147,9 +151,10 @@
         <h1 id="seriesName"></h1>
         <div class="meta-row" id="seriesMeta"></div>
         <div class="description" id="seriesDesc"></div>
-        <div class="actions">
+        <div class="actions" style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="btnReadFirst" style="display:inline-flex;align-items:center;gap:0.4rem;">&#9654; Read</button>
+          <button id="btnAddSeriesList" title="Add to List" style="width:32px;height:32px;border:none;border-radius:8px;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);color:rgba(255,255,255,0.7);font-size:1.1rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:all 0.2s;" onmouseover="this.style.background='var(--accent)';this.style.color='white';" onmouseout="this.style.background='rgba(0,0,0,0.5)';this.style.color='rgba(255,255,255,0.7)';">&#43;</button>
           <button class="btn btn-primary" id="btnMatchCV" style="display:none;">Match Comic Vine</button>
-          <button class="btn btn-secondary" id="btnReadFirst">Read First Issue</button>
         </div>
       </div>
     </div>
@@ -565,7 +570,68 @@
       });
     }
 
+    // ---- Add Series to List ----
+    document.getElementById('btnAddSeriesList').addEventListener('click', async function() {
+      var btn = this;
+      var lists = [];
+      try {
+        var res = await fetch('/api/lists');
+        lists = await res.json();
+      } catch (e) { return; }
+
+      // Remove existing popover if any
+      var old = document.getElementById('seriesListPopover');
+      if (old) { old.remove(); return; }
+
+      var popover = document.createElement('div');
+      popover.id = 'seriesListPopover';
+      popover.style.cssText = 'position:absolute;z-index:100;background:rgba(20,20,20,0.95);backdrop-filter:blur(12px);border-radius:8px;padding:0.5rem 0;min-width:200px;max-height:280px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+
+      var html = '<div style="font-size:0.72rem;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;padding:0.4rem 0.75rem;">Add all issues to list</div>';
+      for (var i = 0; i < lists.length; i++) {
+        html += '<div class="lp-item" data-list-id="' + lists[i].id + '" style="padding:0.45rem 0.75rem;cursor:pointer;font-size:0.82rem;color:var(--text-secondary);transition:background 0.15s;">' + esc(lists[i].name) + '</div>';
+      }
+      if (lists.length === 0) {
+        html += '<div style="padding:0.45rem 0.75rem;color:var(--text-muted);font-size:0.78rem;">No lists yet.</div>';
+      }
+      popover.innerHTML = html;
+
+      btn.parentElement.style.position = 'relative';
+      btn.parentElement.appendChild(popover);
+
+      popover.addEventListener('click', async function(e) {
+        var item = e.target.closest('[data-list-id]');
+        if (!item) return;
+        var listId = item.dataset.listId;
+        var added = 0;
+        for (var j = 0; j < issues.length; j++) {
+          try {
+            var r = await fetch('/api/lists/' + listId + '/items', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ issue_id: issues[j].id }),
+            });
+            if (r.ok) added++;
+          } catch (e) {}
+        }
+        popover.remove();
+        alert('Added ' + added + ' issues to list');
+      });
+
+      setTimeout(function() {
+        document.addEventListener('click', function closePopover(e) {
+          if (!popover.contains(e.target) && e.target !== btn) {
+            popover.remove();
+            document.removeEventListener('click', closePopover);
+          }
+        });
+      }, 0);
+    });
+
     async function start() {
+      fetch('/api/series').then(function(r) { return r.json(); }).then(function(all) {
+        document.getElementById('breadcrumbMeta').textContent = all.length + ' series';
+      }).catch(function() {});
       await loadProgressData();
       await loadUserLists();
       await loadSeries();

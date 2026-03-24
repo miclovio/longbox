@@ -193,6 +193,36 @@
       color: var(--text-muted);
     }
 
+    .sc-add-list {
+      position: absolute;
+      bottom: 0;
+      right: 0;
+      width: 32px;
+      height: 32px;
+      border: none;
+      border-radius: 8px 0 0 0;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 5;
+      opacity: 0;
+      transition: all 0.2s;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .scroll-card:hover .sc-add-list { opacity: 1; }
+    .sc-add-list:hover { background: var(--accent); color: white; }
+
+    @media (max-width: 768px) {
+      .sc-add-list { opacity: 0; }
+    }
+
     .scroll-card .sc-progress-bar {
       height: 3px;
       background: rgba(255, 255, 255, 0.08);
@@ -310,6 +340,71 @@
       border-radius: 3px;
     }
 
+    /* ---- Publisher Cards ---- */
+    .publisher-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 1rem;
+    }
+
+    .publisher-card {
+      position: relative;
+      border-radius: var(--radius);
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .publisher-card:hover {
+      transform: scale(1.02);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+
+    .publisher-card .pub-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      filter: brightness(0.5) saturate(1.3);
+    }
+
+    .publisher-card .pub-tint {
+      position: absolute;
+      inset: 0;
+      opacity: 0.55;
+    }
+
+    .publisher-card .pub-info {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+    }
+
+    .publisher-card .pub-name {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      text-align: center;
+      padding: 0 0.5rem;
+    }
+
+    .publisher-card .pub-count {
+      font-size: 0.8rem;
+      color: rgba(255,255,255,0.75);
+      margin-top: 0.25rem;
+    }
+
+    @media (max-width: 768px) {
+      .publisher-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+      .publisher-card .pub-name { font-size: 1rem; }
+    }
+
     @media (max-width: 480px) {
       .scroll-card { width: 120px; }
       .scroll-card .sc-info h4 { font-size: 0.72rem; }
@@ -328,7 +423,7 @@
     </nav>
     <div class="spacer"></div>
     <div class="search-container">
-      <span class="search-icon">&#128269;</span>
+      <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
       <input type="text" id="searchInput" placeholder="Search series..." autocomplete="off">
     </div>
     <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
@@ -341,10 +436,10 @@
   <div class="main">
     <!-- Tabs -->
     <div class="page-tabs">
-      <button class="page-tab active" data-tab="home">Home</button>
+      <button class="page-tab active" data-tab="home">Recommended</button>
       <button class="page-tab" data-tab="library">Library</button>
+      <button class="page-tab" data-tab="publishers">Publishers</button>
       <button class="page-tab" data-tab="lists">Lists</button>
-      <button class="page-tab" data-tab="profile">Profile</button>
     </div>
 
     <!-- Home Tab -->
@@ -412,6 +507,12 @@
 
     <!-- Library Tab (full grid) -->
     <div class="tab-content" id="tab-library">
+      <div id="publisherFilter" style="display:none;margin-bottom:0.75rem;">
+        <span style="display:inline-flex;align-items:center;gap:0.5rem;background:rgba(255,255,255,0.08);border-radius:20px;padding:0.35rem 0.75rem;font-size:0.82rem;color:var(--text-primary);">
+          <button onclick="clearPublisherFilter()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1rem;padding:0;line-height:1;">&times;</button>
+          <span id="publisherFilterName"></span>
+        </span>
+      </div>
       <div class="toolbar">
         <h2 id="pageTitle">Library</h2>
         <div class="size-slider">
@@ -427,7 +528,7 @@
           <option value="created_at-desc">Recently Added</option>
         </select>
         <div class="search-container search-inline">
-          <span class="search-icon">&#128269;</span>
+          <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
           <input type="text" id="searchInputInline" placeholder="Search..." autocomplete="off">
         </div>
       </div>
@@ -437,6 +538,14 @@
         <p>Scan your library from the Admin page, or adjust your search.</p>
         <a href="/admin.html" class="btn btn-primary">Go to Admin</a>
       </div>
+    </div>
+
+    <!-- Publishers Tab -->
+    <div class="tab-content" id="tab-publishers">
+      <div class="toolbar">
+        <h2>Publishers</h2>
+      </div>
+      <div class="publisher-grid" id="publisherGrid"></div>
     </div>
 
     <!-- Lists Tab -->
@@ -548,6 +657,8 @@
       allSeries = await res.json();
       renderSeries();
       renderHomeRows();
+      // Re-render publishers if that tab is active
+      if (sessionStorage.getItem('active_tab') === 'publishers') renderPublishers();
     }
 
     // ---- Library Tab ----
@@ -558,6 +669,9 @@
       const [sortBy, sortDir] = document.getElementById('sortSelect').value.split('-');
 
       let filtered = allSeries;
+      if (activePublisherFilter) {
+        filtered = filtered.filter(s => s.publisher === activePublisherFilter);
+      }
       if (query) {
         filtered = filtered.filter(s =>
           s.name.toLowerCase().includes(query) ||
@@ -594,16 +708,19 @@
     function scrollCardSeries(s) {
       const thumb = thumbUrl(s.thumbnail_path);
       return `
-        <a class="scroll-card" href="/series.html?id=${s.id}">
-          <div style="position:relative;">
-            ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(s.name)}" loading="lazy">` : `<div class="sc-placeholder">&#128218;</div>`}
-            ${s.issue_count ? `<span class="card-badge">${s.issue_count}</span>` : ''}
-          </div>
-          <div class="sc-info">
-            <h4 title="${esc(s.name)}">${esc(s.name)}</h4>
-            <span class="sc-meta">${s.publisher ? esc(s.publisher) : ''} ${s.start_year ? '&middot; ' + s.start_year : ''}</span>
-          </div>
-        </a>`;
+        <div class="scroll-card" style="position:relative;">
+          <a href="/series.html?id=${s.id}" style="text-decoration:none;color:inherit;">
+            <div style="position:relative;">
+              ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(s.name)}" loading="lazy">` : `<div class="sc-placeholder">&#128218;</div>`}
+              ${s.issue_count ? `<span class="card-badge">${s.issue_count}</span>` : ''}
+            </div>
+            <div class="sc-info">
+              <h4 title="${esc(s.name)}">${esc(s.name)}</h4>
+              <span class="sc-meta">${s.publisher ? esc(s.publisher) : ''} ${s.start_year ? '&middot; ' + s.start_year : ''}</span>
+            </div>
+          </a>
+          <button class="btn btn-secondary sc-add-list" onclick="addSeriesToList(this,${s.id});" title="Add to List">&#43;</button>
+        </div>`;
     }
 
     function scrollCardIssue(issue, extra) {
@@ -669,6 +786,7 @@
       document.getElementById('tab-' + tabName).classList.add('active');
       sessionStorage.setItem('active_tab', tabName);
 
+      if (tabName === 'publishers') renderPublishers();
       if (tabName === 'lists') loadLists();
       if (tabName === 'profile') loadProfile();
     }
@@ -681,6 +799,66 @@
     const savedTab = sessionStorage.getItem('active_tab');
     if (savedTab && document.getElementById('tab-' + savedTab)) {
       switchToTab(savedTab);
+    }
+
+    // ---- Publishers Tab ----
+    var publisherColors = [
+      '#c0392b', '#2980b9', '#27ae60', '#8e44ad', '#d35400',
+      '#16a085', '#c0392b', '#2c3e50', '#f39c12', '#1abc9c',
+      '#e74c3c', '#3498db', '#e67e22', '#9b59b6', '#1e8449'
+    ];
+
+    function renderPublishers() {
+      var grid = document.getElementById('publisherGrid');
+      var pubs = {};
+
+      for (var i = 0; i < allSeries.length; i++) {
+        var s = allSeries[i];
+        var pub = s.publisher || 'Unknown';
+        if (!pubs[pub]) pubs[pub] = { count: 0, covers: [] };
+        pubs[pub].count++;
+        if (s.thumbnail_path && pubs[pub].covers.length < 5) {
+          pubs[pub].covers.push(s.thumbnail_path);
+        }
+      }
+
+      var sorted = Object.keys(pubs).sort(function(a, b) { return pubs[b].count - pubs[a].count; });
+
+      grid.innerHTML = sorted.map(function(pub, idx) {
+        var data = pubs[pub];
+        var cover = data.covers.length > 0
+          ? '/api/thumbnails/' + data.covers[Math.floor(Math.random() * data.covers.length)]
+          : '';
+        var color = publisherColors[idx % publisherColors.length];
+        return '<div class="publisher-card" onclick="filterByPublisher(\'' + esc(pub).replace(/'/g, "\\'") + '\')">'
+          + (cover ? '<div class="pub-bg" style="background-image:url(' + esc(cover) + ');"></div>' : '')
+          + '<div class="pub-tint" style="background:' + color + ';"></div>'
+          + '<div class="pub-info">'
+          + '<div class="pub-name">' + esc(pub) + '</div>'
+          + '<div class="pub-count">' + data.count + ' series</div>'
+          + '</div></div>';
+      }).join('');
+    }
+
+    var activePublisherFilter = '';
+
+    function filterByPublisher(pub) {
+      activePublisherFilter = pub;
+      document.getElementById('searchInput').value = '';
+      var inlineSearch = document.getElementById('searchInputInline');
+      if (inlineSearch) inlineSearch.value = '';
+      document.getElementById('publisherFilter').style.display = 'block';
+      document.getElementById('publisherFilterName').textContent = pub;
+      switchToTab('library');
+      renderSeries();
+      window.scrollTo(0, 0);
+    }
+
+    function clearPublisherFilter() {
+      activePublisherFilter = '';
+      document.getElementById('publisherFilter').style.display = 'none';
+      document.getElementById('publisherFilterName').textContent = '';
+      renderSeries();
     }
 
     // ---- Lists Tab ----
@@ -1029,6 +1207,7 @@
 
     // Grid size slider
     const gridSlider = document.getElementById('gridSizeSlider');
+    if (window.innerWidth <= 768) gridSlider.min = 100;
     const savedSize = localStorage.getItem('grid_size');
     if (savedSize) gridSlider.value = savedSize;
 
@@ -1065,6 +1244,95 @@
         document.getElementById('profileName').textContent = user.username;
       }
     }).catch(() => {});
+
+    // Mobile: first tap on scroll card reveals +, second tap navigates
+    if ('ontouchstart' in window) {
+      var activeCard = null;
+      document.addEventListener('click', function(e) {
+        var card = e.target.closest('.scroll-card') || e.target.closest('.card');
+        var addBtn = e.target.closest('.sc-add-list') || e.target.closest('.card-add-list');
+        if (addBtn) return; // let the + button handle itself
+
+        if (card) {
+          var btn = card.querySelector('.sc-add-list') || card.querySelector('.card-add-list');
+          if (!btn) return;
+
+          if (activeCard === card) {
+            // Second tap — navigate (let the link work)
+            activeCard = null;
+            return;
+          }
+
+          // First tap — reveal +, don't navigate
+          e.preventDefault();
+          e.stopPropagation();
+
+          // Hide previous active
+          if (activeCard) {
+            var prevBtn = activeCard.querySelector('.sc-add-list') || activeCard.querySelector('.card-add-list');
+            if (prevBtn) prevBtn.style.opacity = '0';
+          }
+
+          btn.style.opacity = '1';
+          activeCard = card;
+        } else {
+          // Tapped elsewhere — hide active
+          if (activeCard) {
+            var prevBtn = activeCard.querySelector('.sc-add-list') || activeCard.querySelector('.card-add-list');
+            if (prevBtn) prevBtn.style.opacity = '0';
+            activeCard = null;
+          }
+        }
+      }, true);
+    }
+
+    // ---- Swipe to switch tabs ----
+    if ('ontouchstart' in window) {
+      var tabOrder = ['home', 'library', 'publishers', 'lists'];
+      var swipeStartX = 0;
+      var swipeStartY = 0;
+      var swipeLocked = false;
+
+      document.addEventListener('touchstart', function(e) {
+        if (e.touches.length !== 1) return;
+        swipeStartX = e.touches[0].clientX;
+        swipeStartY = e.touches[0].clientY;
+        swipeLocked = false;
+      }, { passive: true });
+
+      document.addEventListener('touchmove', function(e) {
+        if (swipeLocked) return;
+        var dx = Math.abs(e.touches[0].clientX - swipeStartX);
+        var dy = Math.abs(e.touches[0].clientY - swipeStartY);
+        // Lock direction early — if vertical wins, don't switch tabs
+        if (dx > 10 || dy > 10) {
+          if (dy > dx) swipeLocked = true;
+        }
+      }, { passive: true });
+
+      document.addEventListener('touchend', function(e) {
+        if (swipeLocked) return;
+        // Don't trigger inside navbar or reader
+        if (e.target.closest('.navbar')) return;
+
+        var dx = e.changedTouches[0].clientX - swipeStartX;
+        var dy = e.changedTouches[0].clientY - swipeStartY;
+
+        if (Math.abs(dx) > 80 && Math.abs(dx) > Math.abs(dy) * 3) {
+          var current = sessionStorage.getItem('active_tab') || 'home';
+          var idx = tabOrder.indexOf(current);
+          if (idx < 0) idx = 0;
+
+          if (dx < 0 && idx < tabOrder.length - 1) {
+            switchToTab(tabOrder[idx + 1]);
+            window.scrollTo(0, 0);
+          } else if (dx > 0 && idx > 0) {
+            switchToTab(tabOrder[idx - 1]);
+            window.scrollTo(0, 0);
+          }
+        }
+      }, { passive: true });
+    }
 
     start();
   </script>

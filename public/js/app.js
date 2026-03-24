@@ -90,21 +90,24 @@ function seriesCard(s) {
     : '';
 
   return `
-    <a class="card${readClass}" href="/series.html?id=${s.id}">
-      <div class="card-img-wrap">
-        ${thumb
-          ? `<img src="${thumb}" alt="${esc(s.name)}" loading="lazy">`
-          : `<div class="card-placeholder">&#128218;</div>`
-        }
-        ${readToggle}
-        <span class="card-badge">${s.issue_count}</span>
-        ${progressBar}
-      </div>
-      <div class="card-info">
-        <h3 title="${esc(s.name)}">${esc(s.name)}</h3>
-        <span class="meta">${s.publisher ? esc(s.publisher) : ''} ${s.start_year ? '&middot; ' + esc(s.start_year) : ''}</span>
-      </div>
-    </a>`;
+    <div class="card${readClass}" style="position:relative;">
+      <a href="/series.html?id=${s.id}" style="text-decoration:none;color:inherit;display:block;">
+        <div class="card-img-wrap">
+          ${thumb
+            ? `<img src="${thumb}" alt="${esc(s.name)}" loading="lazy">`
+            : `<div class="card-placeholder">&#128218;</div>`
+          }
+          ${readToggle}
+          <span class="card-badge">${s.issue_count}</span>
+          ${progressBar}
+        </div>
+        <div class="card-info">
+          <h3 title="${esc(s.name)}">${esc(s.name)}</h3>
+          <span class="meta">${s.publisher ? esc(s.publisher) : ''} ${s.start_year ? '&middot; ' + esc(s.start_year) : ''}</span>
+        </div>
+      </a>
+      <button class="card-add-list" onclick="event.preventDefault();event.stopPropagation();addSeriesToList(this,${s.id});" title="Add to List">&#43;</button>
+    </div>`;
 }
 
 /** Build an issue card HTML — supports variant cover rotation */
@@ -224,5 +227,66 @@ function initVariantRotation() {
         showCover(parseInt(dot.dataset.index));
       });
     });
+  });
+}
+
+// Add all issues in a series to a reading list (popover from button)
+function addSeriesToList(btn, seriesId) {
+  var old = document.getElementById('seriesListPop');
+  if (old) { old.remove(); return; }
+
+  fetch('/api/lists').then(function(r) { return r.json(); }).then(function(lists) {
+    var pop = document.createElement('div');
+    pop.id = 'seriesListPop';
+    pop.style.cssText = 'position:fixed;z-index:200;background:rgba(20,20,20,0.95);backdrop-filter:blur(12px);border-radius:8px;padding:0.5rem 0;min-width:180px;max-height:260px;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.6);';
+
+    var html = '<div style="font-size:0.7rem;color:#888;text-transform:uppercase;letter-spacing:0.5px;padding:0.4rem 0.75rem;">Add series to list</div>';
+    for (var i = 0; i < lists.length; i++) {
+      html += '<div data-lid="' + lists[i].id + '" style="padding:0.45rem 0.75rem;cursor:pointer;font-size:0.82rem;color:#ccc;transition:background 0.15s;">' + esc(lists[i].name) + '</div>';
+    }
+    if (!lists.length) html += '<div style="padding:0.45rem 0.75rem;color:#666;font-size:0.78rem;">No lists yet.</div>';
+    pop.innerHTML = html;
+
+    // Position near the button
+    var rect = btn.getBoundingClientRect();
+    pop.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
+    pop.style.top = Math.max(0, rect.bottom + 4) + 'px';
+
+    document.body.appendChild(pop);
+
+    pop.addEventListener('click', function(e) {
+      var item = e.target.closest('[data-lid]');
+      if (!item) return;
+      var listId = item.dataset.lid;
+      item.textContent = 'Adding...';
+
+      fetch('/api/series/' + seriesId).then(function(r) { return r.json(); }).then(function(data) {
+        var issues = data.issues || [];
+        var chain = Promise.resolve();
+        var added = 0;
+        issues.forEach(function(iss) {
+          chain = chain.then(function() {
+            return fetch('/api/lists/' + listId + '/items', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ issue_id: iss.id }),
+            }).then(function(r) { if (r.ok) added++; });
+          });
+        });
+        chain.then(function() {
+          item.textContent = 'Added ' + added + ' issues';
+          setTimeout(function() { pop.remove(); }, 1200);
+        });
+      });
+    });
+
+    setTimeout(function() {
+      document.addEventListener('click', function closePop(e) {
+        if (!pop.contains(e.target) && e.target !== btn) {
+          pop.remove();
+          document.removeEventListener('click', closePop);
+        }
+      });
+    }, 0);
   });
 }

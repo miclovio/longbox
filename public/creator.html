@@ -320,7 +320,7 @@
     </nav>
     <div class="spacer"></div>
     <div class="search-container">
-      <span class="search-icon">&#128269;</span>
+      <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
       <input type="text" id="searchInput" placeholder="Search..." autocomplete="off">
     </div>
     <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
@@ -331,6 +331,10 @@
 
   <!-- Main -->
   <div class="main">
+    <a href="/" onclick="sessionStorage.setItem('active_tab','library');" style="text-decoration:none;display:inline-block;margin-bottom:1rem;">
+      <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Library</div>
+      <div id="breadcrumbMeta" style="font-size:0.7rem;color:var(--text-muted);"></div>
+    </a>
     <!-- Loading State -->
     <div class="loading" id="loadingState">
       <div class="spinner"></div>
@@ -412,6 +416,9 @@
     }
 
     async function loadCreator() {
+      fetch('/api/series').then(function(r) { return r.json(); }).then(function(all) {
+        document.getElementById('breadcrumbMeta').textContent = all.length + ' series';
+      }).catch(function() {});
       const loading = document.getElementById('loadingState');
       const header = document.getElementById('creatorHeader');
 

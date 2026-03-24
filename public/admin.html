@@ -130,6 +130,14 @@
     @media (max-width: 768px) {
       .admin-grid { grid-template-columns: 1fr !important; }
       .unmatched-list { grid-template-columns: 1fr; }
+      .toolbar { flex-wrap: wrap; gap: 0.5rem; }
+      .toolbar h2 { width: 100%; }
+      .config-row { flex-wrap: wrap; gap: 0.25rem; }
+      .config-row .value { word-break: break-all; font-size: 0.75rem; }
+      .user-table th, .user-table td { padding: 0.4rem 0.35rem; font-size: 0.78rem; }
+      .stat { font-size: 1.5rem; }
+      .create-user-form { flex-direction: column; }
+      .create-user-form input { width: 100%; }
     }
   </style>
 </head>
@@ -156,7 +164,7 @@
     <div class="log" id="scanLog" style="display:none;margin-bottom:1.25rem;"></div>
 
     <!-- Row 1: Stats + Folders + Config -->
-    <div class="admin-grid" style="grid-template-columns:1fr 1fr 1fr;">
+    <div class="admin-grid">
       <div class="admin-card">
         <h3>Library Stats</h3>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
@@ -194,7 +202,7 @@
         <div class="create-user-form">
           <input type="text" id="newUsername" placeholder="Username" autocomplete="off">
           <input type="password" id="newPassword" placeholder="Password" autocomplete="new-password">
-          <label style="display:flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:var(--text-secondary);cursor:pointer;">
+          <label style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:var(--text-secondary);cursor:pointer;">
             <input type="checkbox" id="newIsAdmin" style="accent-color:var(--accent);"> Admin
           </label>
           <button class="btn btn-primary" onclick="createUser()">Add User</button>

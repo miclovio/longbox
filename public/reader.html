@@ -11,8 +11,7 @@
       overflow: hidden;
       -webkit-user-select: none;
       user-select: none;
-      touch-action: auto !important;
-      -ms-touch-action: auto !important;
+      touch-action: pan-x pan-y;
     }
 
     /* ---- Top Bar ---- */
@@ -123,7 +122,7 @@
       position: fixed;
       top: 0;
       bottom: 0;
-      width: 30%;
+      width: 10%;
       z-index: 10;
       cursor: pointer;
     }
@@ -131,8 +130,8 @@
     .click-zone.left { left: 0; }
     .click-zone.right { right: 0; }
     .click-zone.center {
-      left: 30%;
-      width: 40%;
+      left: 10%;
+      width: 80%;
       cursor: default;
     }
 
@@ -413,8 +412,8 @@
 
     /* ---- Mobile ---- */
     @media (max-width: 768px) {
-      .click-zone.left, .click-zone.right { width: 25%; }
-      .click-zone.center { left: 25%; width: 50%; }
+      .click-zone.left, .click-zone.right { width: 10%; }
+      .click-zone.center { left: 10%; width: 80%; }
       .reader-bar { padding: 0 0.5rem; }
       .reader-bar .title { font-size: 0.75rem; }
       .settings-panel { min-width: 180px; }
@@ -429,6 +428,7 @@
     <a class="back-btn" id="backBtn" title="Back">&#8592;</a>
     <div class="title" id="readerTitle">Loading...</div>
     <span class="page-info" id="pageInfo"></span>
+    <button class="bar-btn" id="zoomModeBtn" title="Zoom Mode">&#8853;</button>
     <button class="bar-btn" id="bookmarkBtn" title="Bookmark this page">&#9734;</button>
     <button class="bar-btn" id="listBtn" title="Add to list" style="position:relative;">&#9776;</button>
     <button class="bar-btn" id="settingsBtn" title="Settings">&#9881;</button>
@@ -503,6 +503,8 @@
 
   <script src="/js/app.js"></script>
   <script>
+    var zoomModeOn = false;
+
     const issueId = getParam('id');
     let issue = null;
     let pageCount = 0;
@@ -905,11 +907,12 @@
     }, { passive: true });
 
     document.addEventListener('touchend', (e) => {
+      if (zoomModeOn) return;
       const dx = e.changedTouches[0].clientX - touchStartX;
       const dy = e.changedTouches[0].clientY - touchStartY;
 
       // Only trigger on horizontal swipes (not vertical scroll)
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (Math.abs(dx) > 100 && Math.abs(dx) > Math.abs(dy) * 2) {
         if (dx < 0) goNext();
         else goPrev();
       }
@@ -989,6 +992,39 @@
       const listBtn = document.getElementById('listBtn');
       if (!dropdown.contains(e.target) && e.target !== listBtn) {
         dropdown.classList.remove('visible');
+      }
+    });
+
+    // ---- Zoom Mode ----
+    document.getElementById('zoomModeBtn').addEventListener('click', function() {
+      zoomModeOn = !zoomModeOn;
+      var btn = document.getElementById('zoomModeBtn');
+      var img = document.getElementById('pageImg');
+      var vp = document.getElementById('viewport');
+      var zones = document.querySelectorAll('.click-zone');
+
+      btn.classList.toggle('active', zoomModeOn);
+      showToast(zoomModeOn ? 'Zoom mode on — pinch and scroll' : 'Zoom mode off');
+
+      if (zoomModeOn) {
+        // Enable pinch zoom + scroll
+        document.documentElement.style.touchAction = 'auto';
+        document.body.style.touchAction = 'auto';
+        vp.style.touchAction = 'auto';
+        // Hide click zones
+        for (var i = 0; i < zones.length; i++) zones[i].style.display = 'none';
+        // Fit width so page is readable and scrollable
+        img.className = 'fit-width';
+        vp.style.overflow = 'auto';
+      } else {
+        // Disable pinch zoom
+        document.documentElement.style.touchAction = 'pan-x pan-y';
+        document.body.style.touchAction = 'pan-x pan-y';
+        vp.style.touchAction = '';
+        // Restore click zones
+        for (var i = 0; i < zones.length; i++) zones[i].style.display = '';
+        // Restore normal fit mode
+        applyFitMode();
       }
     });
 
