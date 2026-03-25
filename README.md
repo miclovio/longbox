@@ -9,17 +9,24 @@ A self-hosted comic book server with a Plex-style dark UI. Organize, read, and t
 ## Features
 
 - **Library Browser** — Plex-style dark grid with cover thumbnails, search, sort, and adjustable card sizes
-- **Comic Reader** — Full-screen in-browser reader with keyboard shortcuts, swipe navigation, fit modes, and page preloading
+- **Publishers Tab** — Browse by publisher with colored category cards, click to filter library
+- **Ratings & Reviews** — Rate series 1-5 stars with optional text reviews, sort library by highest rated
+- **Comic Reader** — Full-screen in-browser reader with keyboard shortcuts, swipe navigation, fit modes, pinch zoom, and page preloading
 - **Comic Vine Integration** — Automatically fetches metadata (descriptions, publishers, cover dates, creators, characters) from Comic Vine API
 - **Reading Progress** — Tracks your reading position per-issue, marks completed issues, shows progress on series cards
 - **Bookmarks** — Save bookmarked pages with notes, jump back to them from your profile
-- **Reading Lists** — Create custom lists with mosaic cover art, drag-to-reorder, add issues from series pages or the reader
-- **Multi-User** — Session-based auth with admin/member roles, per-user progress and bookmarks
+- **Reading Lists** — Create custom lists, add individual issues or entire series at once from any card
+- **Multi-User** — Session-based auth with admin/member roles, per-user progress, bookmarks, and ratings
+- **User Profiles** — Customizable username and profile picture, reading stats, ratings & reviews overview
 - **Creator Pages** — Click a writer/artist name to see their bio, your local comics they worked on, and their other works from Comic Vine
 - **Variant Cover Grouping** — Multiple covers of the same issue are grouped into one card with hover rotation
 - **OPDS Feed** — Connect external reader apps (Panels, Chunky, Librera) via OPDS catalog with HTTP Basic Auth
-- **Admin Dashboard** — Library stats, scan trigger, user management, Comic Vine match status, multiple comics folder support
-- **Responsive** — Works on desktop, tablet, and mobile
+- **Admin Dashboard** — Library stats, scan trigger, user management, Comic Vine match status, bulk auto-match, multiple comics folder support
+- **Docker Support** — Dockerfile and docker-compose.yml included for cross-platform deployment
+- **Cloudflare Tunnel Ready** — Expose your local server securely over the internet with zero port forwarding
+- **Nested Folder Support** — Subfolders within a series folder are detected as separate series
+- **Large File Support** — CBZ files over 2GB (compendiums, omnibus editions) fully supported
+- **Mobile Optimized** — Swipe between tabs, tap-to-reveal add-to-list, pinch zoom in reader, responsive admin page
 
 ## Screenshots
 
@@ -60,7 +67,7 @@ A self-hosted comic book server with a Plex-style dark UI. Organize, read, and t
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/longbox.git
+git clone https://github.com/miclovio/longbox.git
 cd longbox
 
 # Install dependencies
@@ -75,6 +82,18 @@ npm start
 
 # Visit http://localhost:3131
 # The first user you register becomes the admin
+```
+
+### Docker
+
+```bash
+git clone https://github.com/miclovio/longbox.git
+cd longbox
+
+# Edit docker-compose.yml — set your comics path, session secret, and API key
+docker compose up -d
+
+# Visit http://localhost:3131
 ```
 
 ### Configuration (.env)
@@ -111,9 +130,11 @@ H:/Comics/
 ```
 
 - Subfolders = series
+- Nested subfolders = separate series (e.g., `Invincible/Invincible Presents - Atom Eve/`)
 - Loose CBR/CBZ files in the root = individual series (one-shots, graphic novels)
-- Supports both CBR (RAR) and CBZ (ZIP) formats
+- Supports both CBR (RAR) and CBZ (ZIP) formats, including files over 2GB
 - Handles mislabeled files (e.g., ZIP files with .cbr extension)
+- Skips macOS ._ metadata files automatically
 
 ### Getting a Comic Vine API Key
 
@@ -144,9 +165,10 @@ COMICS_PATH=H:/Comics,D:/MoreComics,E:/Manga
 - **Backend:** Node.js + Express
 - **Database:** SQLite (via better-sqlite3)
 - **Frontend:** Vanilla HTML/CSS/JS (no build step)
-- **CBR/CBZ:** node-unrar-js + JSZip
+- **CBR/CBZ:** node-unrar-js + yauzl (streaming ZIP for large files) + system unrar fallback
 - **Thumbnails:** Sharp
 - **Metadata:** Comic Vine API
+- **Deployment:** Docker + Cloudflare Tunnel
 
 ## License
 
