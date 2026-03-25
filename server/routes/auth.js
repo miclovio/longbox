@@ -104,7 +104,7 @@ router.get('/me', (req, res) => {
   }
 
   const db = getDb();
-  const user = db.prepare('SELECT id, username, is_admin, created_at FROM users WHERE id = ?')
+  const user = db.prepare('SELECT id, username, display_name, avatar_path, is_admin, created_at FROM users WHERE id = ?')
     .get(req.session.userId);
 
   if (!user) {
@@ -123,6 +123,8 @@ router.get('/me', (req, res) => {
     authenticated: true,
     id: user.id,
     username: user.username,
+    displayName: user.display_name || user.username,
+    avatarPath: user.avatar_path || null,
     isAdmin: user.is_admin === 1,
     createdAt: user.created_at,
     stats: {
@@ -130,6 +132,77 @@ router.get('/me', (req, res) => {
       issuesCompleted: stats.completed || 0,
     },
   });
+});
+
+// PUT /api/auth/profile — update username
+router.put('/profile', (req, res) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+  const db = getDb();
+  const { displayName } = req.body;
+  if (!displayName || !displayName.trim()) {
+    return res.status(400).json({ error: 'Username is required' });
+  }
+  const name = displayName.trim();
+  // Check if username is taken by another user
+  const existing = db.prepare('SELECT id FROM users WHERE username = ? AND id != ?').get(name, req.session.userId);
+  if (existing) {
+    return res.status(409).json({ error: 'Username already taken' });
+  }
+  db.prepare('UPDATE users SET username = ?, display_name = ? WHERE id = ?').run(name, name, req.session.userId);
+  res.json({ ok: true });
+});
+
+// POST /api/auth/avatar — upload profile picture
+router.post('/avatar', (req, res) => {
+  if (!req.session || !req.session.userId) {
+    return res.status(401).json({ error: 'Not authenticated' });
+  }
+
+  const chunks = [];
+  req.on('data', (chunk) => chunks.push(chunk));
+  req.on('end', () => {
+    const buffer = Buffer.concat(chunks);
+    if (buffer.length === 0) {
+      return res.status(400).json({ error: 'No image data' });
+    }
+    if (buffer.length > 5 * 1024 * 1024) {
+      return res.status(400).json({ error: 'Image too large (max 5MB)' });
+    }
+
+    const dataDir = process.env.DATA_DIR || './data';
+    const avatarDir = require('path').join(dataDir, 'avatars');
+    require('fs').mkdirSync(avatarDir, { recursive: true });
+
+    const filename = 'user_' + req.session.userId + '.jpg';
+    const filePath = require('path').join(avatarDir, filename);
+
+    // Resize to 200x200 with sharp
+    const sharp = require('sharp');
+    sharp(buffer)
+      .resize(200, 200, { fit: 'cover' })
+      .jpeg({ quality: 85 })
+      .toFile(filePath)
+      .then(() => {
+        const db = getDb();
+        db.prepare('UPDATE users SET avatar_path = ? WHERE id = ?').run(filename, req.session.userId);
+        res.json({ ok: true, avatarPath: filename });
+      })
+      .catch((err) => {
+        res.status(500).json({ error: 'Failed to process image: ' + err.message });
+      });
+  });
+});
+
+// GET /api/auth/avatar/:filename — serve avatar image
+router.get('/avatar/:filename', (req, res) => {
+  const dataDir = process.env.DATA_DIR || './data';
+  const filePath = require('path').join(dataDir, 'avatars', req.params.filename);
+  if (!require('fs').existsSync(filePath)) {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  res.type('image/jpeg').sendFile(require('path').resolve(filePath));
 });
 
 // GET /api/auth/setup — check if any users exist (for first-time setup)

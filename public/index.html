@@ -593,10 +593,17 @@
 
     <!-- Profile Tab -->
     <div class="tab-content" id="tab-profile">
-      <div style="display:flex;align-items:center;gap:1.5rem;background:var(--bg-secondary);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;">
-        <div id="profileAvatar" style="width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:white;flex-shrink:0;"></div>
-        <div>
-          <h1 id="profileUsername" style="font-size:1.5rem;margin-bottom:0.25rem;"></h1>
+      <div style="display:flex;align-items:center;gap:1.5rem;background:var(--bg-secondary);border-radius:var(--radius);padding:2rem;margin-bottom:2rem;flex-wrap:wrap;">
+        <div style="position:relative;cursor:pointer;" onclick="document.getElementById('avatarUpload').click();" title="Change profile picture">
+          <div id="profileAvatar" style="width:80px;height:80px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:2rem;font-weight:700;color:white;flex-shrink:0;overflow:hidden;"></div>
+          <div style="position:absolute;bottom:0;right:0;width:24px;height:24px;background:var(--bg-card);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.7rem;color:var(--text-muted);border:2px solid var(--bg-secondary);">&#9998;</div>
+          <input type="file" id="avatarUpload" accept="image/*" style="display:none;" onchange="uploadAvatar(this)">
+        </div>
+        <div style="flex:1;min-width:0;">
+          <div style="display:flex;align-items:center;gap:0.5rem;">
+            <h1 id="profileUsername" style="font-size:1.5rem;margin-bottom:0;"></h1>
+            <button onclick="editDisplayName()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:0.85rem;padding:0.2rem;" title="Edit name">&#9998;</button>
+          </div>
           <div id="profileRole" style="font-size:0.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;"></div>
           <div id="profileJoined" style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;"></div>
           <div style="display:flex;gap:1.5rem;margin-top:0.75rem;">
@@ -604,6 +611,14 @@
             <div style="text-align:center;"><div id="profileCompleted" style="font-size:1.5rem;font-weight:700;">0</div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">Completed</div></div>
           </div>
           <button class="btn btn-secondary" style="margin-top:1rem;" onclick="logout()">Sign Out</button>
+        </div>
+      </div>
+      <!-- Edit Name Inline -->
+      <div id="editNameForm" style="display:none;background:var(--bg-secondary);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;">
+        <div style="display:flex;gap:0.5rem;align-items:center;">
+          <input type="text" id="editNameInput" placeholder="Display name" style="flex:1;padding:0.5rem 0.75rem;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#fff;font-size:0.9rem;">
+          <button class="btn btn-primary" onclick="saveDisplayName()">Save</button>
+          <button class="btn btn-secondary" onclick="document.getElementById('editNameForm').style.display='none';">Cancel</button>
         </div>
       </div>
       <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Currently Reading</h3>
@@ -1064,8 +1079,13 @@
         const user = await res.json();
         if (!user.authenticated) return;
 
-        document.getElementById('profileAvatar').textContent = user.username.charAt(0).toUpperCase();
-        document.getElementById('profileUsername').textContent = user.username;
+        var avatarEl = document.getElementById('profileAvatar');
+        if (user.avatarPath) {
+          avatarEl.innerHTML = '<img src="/api/auth/avatar/' + user.avatarPath + '?t=' + Date.now() + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+        } else {
+          avatarEl.textContent = (user.displayName || user.username).charAt(0).toUpperCase();
+        }
+        document.getElementById('profileUsername').textContent = user.displayName || user.username;
         document.getElementById('profileRole').textContent = user.isAdmin ? 'Admin' : 'Member';
         document.getElementById('profileJoined').textContent = 'Joined ' + new Date(user.createdAt).toLocaleDateString();
         document.getElementById('profileStarted').textContent = user.stats.issuesStarted;
@@ -1183,6 +1203,58 @@
       loadProfile();
     }
 
+    function editDisplayName() {
+      var current = document.getElementById('profileUsername').textContent;
+      document.getElementById('editNameInput').value = current;
+      document.getElementById('editNameForm').style.display = 'block';
+      document.getElementById('editNameInput').focus();
+    }
+
+    async function saveDisplayName() {
+      var name = document.getElementById('editNameInput').value.trim();
+      if (!name) return;
+      var res = await fetch('/api/auth/profile', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ displayName: name }),
+      });
+      if (res.ok) {
+        document.getElementById('editNameForm').style.display = 'none';
+        document.getElementById('profileUsername').textContent = name;
+        // Update navbar too
+        var navName = document.getElementById('profileName');
+        if (navName) navName.textContent = name;
+      }
+    }
+
+    async function uploadAvatar(input) {
+      if (!input.files || !input.files[0]) return;
+      var file = input.files[0];
+      if (file.size > 5 * 1024 * 1024) { alert('Image too large (max 5MB)'); return; }
+
+      var reader = new FileReader();
+      reader.onload = async function() {
+        var res = await fetch('/api/auth/avatar', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' },
+          body: new Uint8Array(reader.result),
+        });
+        if (res.ok) {
+          var data = await res.json();
+          var avatarEl = document.getElementById('profileAvatar');
+          avatarEl.innerHTML = '<img src="/api/auth/avatar/' + data.avatarPath + '?t=' + Date.now() + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">';
+          // Update navbar avatar too
+          var navAvatar = document.getElementById('profileInitial');
+          if (navAvatar) {
+            navAvatar.style.backgroundImage = 'url(/api/auth/avatar/' + data.avatarPath + '?t=' + Date.now() + ')';
+            navAvatar.style.backgroundSize = 'cover';
+            navAvatar.textContent = '';
+          }
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
     async function logout() {
       await fetch('/api/auth/logout', { method: 'POST' });
       window.location.href = '/login.html';
@@ -1240,8 +1312,15 @@
     fetch('/api/auth/me').then(r => r.json()).then(user => {
       if (user.authenticated) {
         if (user.isAdmin) document.getElementById('adminLink').style.display = '';
-        document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
-        document.getElementById('profileName').textContent = user.username;
+        var navAvatar = document.getElementById('profileInitial');
+        if (user.avatarPath) {
+          navAvatar.style.backgroundImage = 'url(/api/auth/avatar/' + user.avatarPath + ')';
+          navAvatar.style.backgroundSize = 'cover';
+          navAvatar.textContent = '';
+        } else {
+          navAvatar.textContent = (user.displayName || user.username).charAt(0).toUpperCase();
+        }
+        document.getElementById('profileName').textContent = user.displayName || user.username;
       }
     }).catch(() => {});
 

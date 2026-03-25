@@ -111,6 +111,15 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_progress_issue ON reading_progress(issue_id);
     CREATE INDEX IF NOT EXISTS idx_bookmarks_user ON bookmarks(user_id);
   `);
+
+  // Add display_name and avatar_path columns if they don't exist
+  const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
+  if (!cols.includes('display_name')) {
+    db.exec("ALTER TABLE users ADD COLUMN display_name TEXT");
+  }
+  if (!cols.includes('avatar_path')) {
+    db.exec("ALTER TABLE users ADD COLUMN avatar_path TEXT");
+  }
 }
 
 module.exports = { getDb };

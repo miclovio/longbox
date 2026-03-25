@@ -628,8 +628,15 @@
     fetch('/api/auth/me').then(r => r.json()).then(user => {
       if (user.authenticated) {
         if (user.isAdmin) document.getElementById('adminLink').style.display = '';
-        document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
-        document.getElementById('profileName').textContent = user.username;
+        var navAvatar = document.getElementById('profileInitial');
+        if (user.avatarPath) {
+          navAvatar.style.backgroundImage = 'url(/api/auth/avatar/' + user.avatarPath + ')';
+          navAvatar.style.backgroundSize = 'cover';
+          navAvatar.textContent = '';
+        } else {
+          navAvatar.textContent = (user.displayName || user.username).charAt(0).toUpperCase();
+        }
+        document.getElementById('profileName').textContent = user.displayName || user.username;
       }
     }).catch(() => {});
 
