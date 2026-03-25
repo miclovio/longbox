@@ -344,6 +344,150 @@
       border-radius: 3px;
     }
 
+    /* ---- Activity Feed ---- */
+    #activityFeed {
+      max-width: 650px;
+      margin: 0 auto;
+    }
+
+    #activityLoadMore {
+      max-width: 650px;
+      margin: 1rem auto 0;
+    }
+
+    .activity-card {
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      margin-bottom: 1rem;
+      overflow: hidden;
+    }
+
+    .activity-header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+    }
+
+    .activity-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .activity-avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    .activity-meta {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .activity-meta .act-user {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .activity-meta .act-action {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .activity-meta .act-action a {
+      color: var(--text-primary);
+      font-weight: 600;
+      text-decoration: none;
+    }
+
+    .activity-meta .act-action a:hover { color: var(--accent); }
+
+    .activity-meta .act-time {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+    }
+
+    .activity-cover-wrap {
+      position: relative;
+      width: 100%;
+      max-height: 350px;
+      overflow: hidden;
+      cursor: pointer;
+    }
+
+    .activity-cover-bg {
+      position: absolute;
+      inset: 0;
+      background-size: cover;
+      background-position: center;
+      filter: blur(20px) brightness(0.4);
+      transform: scale(1.2);
+    }
+
+    .activity-cover {
+      position: relative;
+      width: 100%;
+      max-height: 350px;
+      object-fit: contain;
+      display: block;
+    }
+
+    .activity-stars {
+      padding: 0.5rem 1rem;
+      font-size: 1.1rem;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .activity-footer {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 0.5rem 1rem 0.75rem;
+    }
+
+    .activity-footer button {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0.4rem;
+      display: flex;
+      align-items: center;
+      gap: 0.35rem;
+      transition: color 0.15s;
+    }
+
+    .activity-footer button svg {
+      width: 22px;
+      height: 22px;
+    }
+
+    .activity-footer button:hover { color: var(--text-primary); }
+    .activity-footer button.reacted { color: var(--accent); }
+
+    .activity-footer .react-count {
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 480px) {
+      .activity-cover { max-height: 200px; }
+      .activity-header { padding: 0.6rem 0.75rem; }
+      .activity-footer { padding: 0.4rem 0.75rem 0.6rem; }
+    }
+
     /* ---- Publisher Cards ---- */
     .publisher-grid {
       display: grid;
@@ -444,6 +588,7 @@
       <button class="page-tab" data-tab="library">Library</button>
       <button class="page-tab" data-tab="publishers">Publishers</button>
       <button class="page-tab" data-tab="lists">Lists</button>
+      <button class="page-tab" data-tab="activity">Activity <span id="activityBadge" style="display:none;background:var(--accent);color:white;font-size:0.65rem;font-weight:700;padding:0.1rem 0.4rem;border-radius:10px;margin-left:0.3rem;vertical-align:middle;"></span></button>
     </div>
 
     <!-- Home Tab -->
@@ -593,6 +738,18 @@
         </div>
         <div class="grid" id="listDetailGrid"></div>
         <div id="listDetailEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">This list is empty. Add issues from a series page.</div>
+      </div>
+    </div>
+
+    <!-- Activity Tab -->
+    <div class="tab-content" id="tab-activity">
+      <div class="toolbar">
+        <h2>Activity</h2>
+      </div>
+      <div id="activityFeed"></div>
+      <div id="activityEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;text-align:center;padding:2rem;">No activity yet. Start reading, rating, or adding to lists!</div>
+      <div id="activityLoadMore" style="display:none;text-align:center;margin-top:1rem;">
+        <button class="btn btn-secondary" onclick="loadMoreActivity()">Load more</button>
       </div>
     </div>
 
@@ -858,6 +1015,12 @@
       sessionStorage.setItem('active_tab', tabName);
 
       if (tabName === 'publishers') renderPublishers();
+      if (tabName === 'activity') {
+        loadActivity(true);
+        // Clear badge and save last seen time
+        document.getElementById('activityBadge').style.display = 'none';
+        localStorage.setItem('activity_last_seen', new Date().toISOString());
+      }
       if (tabName === 'lists') loadLists();
       if (tabName === 'profile') loadProfile();
     }
@@ -1128,6 +1291,169 @@
       }
     }
 
+    // ---- Activity Tab ----
+    var activityOffset = 0;
+    var activityLoading = false;
+
+    function getDateLabel(dateStr) {
+      var now = new Date();
+      var then = new Date(dateStr + 'Z');
+      var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      var thenDay = new Date(then.getFullYear(), then.getMonth(), then.getDate());
+      var diff = Math.floor((today - thenDay) / 86400000);
+      if (diff === 0) return 'Today';
+      if (diff === 1) return 'Yesterday';
+      if (diff < 7) return then.toLocaleDateString(undefined, { weekday: 'long' });
+      return then.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+    }
+
+    function timeAgo(dateStr) {
+      var now = new Date();
+      var then = new Date(dateStr + 'Z');
+      var diff = Math.floor((now - then) / 1000);
+      if (diff < 60) return 'Just now';
+      if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+      if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+      if (diff < 172800) return 'Yesterday';
+      if (diff < 604800) return Math.floor(diff / 86400) + 'd ago';
+      return then.toLocaleDateString();
+    }
+
+    function renderActivityItem(item) {
+      var name = item.display_name || item.username;
+      var avatarHtml = item.avatar_path
+        ? '<img src="/api/auth/avatar/' + esc(item.avatar_path) + '">'
+        : esc(name.charAt(0).toUpperCase());
+
+      var actionText = '';
+      var coverThumb = '';
+      var starsHtml = '';
+      var seriesLink = item.series_id ? '<a href="/series.html?id=' + item.series_id + '">' + esc(item.series_name || '') + '</a>' : '';
+
+      if (item.action_type === 'completed') {
+        var issueNum = item.issue_number != null ? '#' + item.issue_number : esc(item.issue_title || '');
+        actionText = 'completed ' + seriesLink + ' ' + issueNum;
+        coverThumb = item.issue_thumb || item.series_thumb;
+      } else if (item.action_type === 'rated') {
+        actionText = 'rated ' + seriesLink;
+        coverThumb = item.series_thumb;
+        var stars = '';
+        for (var i = 1; i <= 5; i++) stars += i <= item.rating ? '&#9733;' : '&#9734;';
+        starsHtml = '<div class="activity-stars">' + stars + '</div>';
+      } else if (item.action_type === 'added_to_list') {
+        actionText = 'added ' + seriesLink + ' to <strong>' + esc(item.list_name || 'a list') + '</strong>';
+        coverThumb = item.series_thumb;
+      }
+
+      var coverHtml = coverThumb
+        ? '<div class="activity-cover-wrap" onclick="window.location.href=\'/series.html?id=' + item.series_id + '\'">'
+          + '<div class="activity-cover-bg" style="background-image:url(/api/thumbnails/' + esc(coverThumb) + ');"></div>'
+          + '<img class="activity-cover" src="/api/thumbnails/' + esc(coverThumb) + '">'
+          + '</div>'
+        : '';
+
+      var reactedClass = item.user_reacted > 0 ? ' reacted' : '';
+      var reactCount = item.reaction_count > 0 ? '<span class="react-count">' + item.reaction_count + '</span>' : '';
+
+      return '<div class="activity-card" data-activity-id="' + item.id + '">'
+        + '<div class="activity-header">'
+        + '<a href="/user.html?id=' + item.user_id + '" class="activity-avatar" style="text-decoration:none;color:white;">' + avatarHtml + '</a>'
+        + '<div class="activity-meta">'
+        + '<div class="act-user"><a href="/user.html?id=' + item.user_id + '" style="text-decoration:none;color:inherit;">' + esc(name) + '</a></div>'
+        + '<div class="act-action">' + actionText + '</div>'
+        + '<div class="act-time">' + timeAgo(item.created_at) + '</div>'
+        + '</div></div>'
+        + coverHtml
+        + starsHtml
+        + '<div class="activity-footer">'
+        + '<button class="react-btn' + reactedClass + '" onclick="toggleReaction(' + item.id + ', this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/><path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg>' + reactCount + '</button>'
+        + '<button onclick="addActivityToList(this, ' + (item.series_id || 'null') + ')" title="Add to list"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>'
+        + '</div></div>';
+    }
+
+    async function loadActivity(reset) {
+      if (activityLoading) return;
+      activityLoading = true;
+      if (reset) activityOffset = 0;
+
+      try {
+        var res = await fetch('/api/activity?limit=20&offset=' + activityOffset);
+        var data = await res.json();
+
+        var feed = document.getElementById('activityFeed');
+        var empty = document.getElementById('activityEmpty');
+        var loadMore = document.getElementById('activityLoadMore');
+
+        if (activityOffset === 0) { feed.innerHTML = ''; feed.dataset.lastDate = ''; }
+
+        if (data.items.length === 0 && activityOffset === 0) {
+          empty.style.display = 'block';
+          loadMore.style.display = 'none';
+        } else {
+          empty.style.display = 'none';
+          var html = '';
+          var lastDateLabel = feed.dataset.lastDate || '';
+          for (var i = 0; i < data.items.length; i++) {
+            var item = data.items[i];
+            var dateLabel = getDateLabel(item.created_at);
+            if (dateLabel !== lastDateLabel) {
+              html += '<div style="font-size:0.8rem;font-weight:600;color:var(--text-muted);padding:0.75rem 0 0.25rem;max-width:650px;margin:0 auto;">' + dateLabel + '</div>';
+              lastDateLabel = dateLabel;
+            }
+            html += renderActivityItem(item);
+          }
+          feed.dataset.lastDate = lastDateLabel;
+          feed.innerHTML += html;
+          activityOffset += data.items.length;
+          loadMore.style.display = activityOffset < data.total ? 'block' : 'none';
+        }
+      } catch(e) {}
+      activityLoading = false;
+    }
+
+    function loadMoreActivity() {
+      loadActivity();
+    }
+
+    async function toggleReaction(activityId, btn) {
+      var res = await fetch('/api/activity/' + activityId + '/react', { method: 'POST' });
+      if (res.ok) {
+        var data = await res.json();
+        btn.classList.toggle('reacted', data.reacted);
+        // Reload to update count
+        loadActivity(true);
+      }
+    }
+
+    async function checkActivityBadge() {
+      try {
+        var lastSeen = localStorage.getItem('activity_last_seen');
+        var res = await fetch('/api/activity?limit=50&offset=0');
+        var data = await res.json();
+        if (!lastSeen || !data.items.length) return;
+
+        var lastSeenDate = new Date(lastSeen);
+        var newCount = 0;
+        for (var i = 0; i < data.items.length; i++) {
+          if (new Date(data.items[i].created_at + 'Z') > lastSeenDate) newCount++;
+          else break;
+        }
+
+        var badge = document.getElementById('activityBadge');
+        if (newCount > 0 && sessionStorage.getItem('active_tab') !== 'activity') {
+          badge.textContent = newCount > 9 ? '9+' : newCount;
+          badge.style.display = 'inline';
+        } else {
+          badge.style.display = 'none';
+        }
+      } catch(e) {}
+    }
+
+    function addActivityToList(btn, seriesId) {
+      if (!seriesId) return;
+      addSeriesToList(btn, seriesId);
+    }
+
     // ---- Profile Tab ----
     async function loadProfile() {
       try {
@@ -1381,6 +1707,7 @@
       await loadSeries();
       loadContinueReading();
       initScrollFades();
+      checkActivityBadge();
       const saved = sessionStorage.getItem('library_scroll');
       if (saved) {
         requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));
@@ -1446,7 +1773,7 @@
 
     // ---- Swipe to switch tabs ----
     if ('ontouchstart' in window) {
-      var tabOrder = ['home', 'library', 'publishers', 'lists'];
+      var tabOrder = ['home', 'library', 'publishers', 'lists', 'activity'];
       var swipeStartX = 0;
       var swipeStartY = 0;
       var swipeLocked = false;

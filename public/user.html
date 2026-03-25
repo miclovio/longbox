@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>User — Longbox</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/css/style.css">
+  <style>
+    .user-header {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      padding: 2rem;
+      margin-bottom: 2rem;
+    }
+
+    .user-avatar {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .user-avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+    .scroll-section .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem; }
+    .scroll-section h3 { font-size: 1.1rem; font-weight: 600; }
+    .scroll-nav { display: flex; gap: 0.25rem; }
+    .scroll-nav button { width: 32px; height: 32px; border: none; border-radius: 50%; background: rgba(255,255,255,0.08); color: var(--text-secondary); font-size: 1.1rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
+    .scroll-nav button:hover { background: rgba(255,255,255,0.15); color: white; }
+    .scroll-row-wrap { position: relative; overflow: hidden; }
+    .scroll-row { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.5rem; scroll-behavior: smooth; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+    .scroll-row::-webkit-scrollbar { display: none; }
+    .scroll-card { flex-shrink: 0; width: 150px; background: var(--bg-card); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; text-decoration: none; color: inherit; display: block; }
+    .scroll-card:hover { transform: translateY(-4px); box-shadow: 0 12px 32px var(--shadow); }
+    .scroll-card .sc-img { width: 100%; aspect-ratio: 2/3; object-fit: cover; display: block; background: var(--bg-secondary); }
+    .scroll-card .sc-placeholder { width: 100%; aspect-ratio: 2/3; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--text-muted); background: var(--bg-secondary); }
+    .scroll-card .sc-info { padding: 0.5rem 0.6rem; }
+    .scroll-card .sc-info h4 { font-size: 0.78rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 0.1rem; }
+    .scroll-card .sc-info .sc-meta { font-size: 0.68rem; color: var(--text-muted); }
+    .scroll-card .sc-progress-bar { height: 3px; background: rgba(255,255,255,0.08); }
+    .scroll-card .sc-progress-fill { height: 100%; background: var(--accent); }
+
+    @media (max-width: 768px) {
+      .user-header { flex-direction: column; text-align: center; padding: 1.5rem; }
+    }
+    @media (max-width: 480px) {
+      .scroll-card { width: 120px; }
+      .scroll-card .sc-info h4 { font-size: 0.72rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header class="navbar">
+    <a class="logo" href="/">Long<span>box</span></a>
+    <nav>
+      <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
+    </nav>
+    <div class="spacer"></div>
+    <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
+      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
+      <span id="profileName"></span>
+    </a>
+  </header>
+
+  <div class="main">
+    <div style="margin-bottom:0.75rem;font-size:0.8rem;"><a href="/" onclick="sessionStorage.setItem('active_tab','activity');" style="color:var(--text-muted);text-decoration:none;">&larr; Activity</a></div>
+
+    <div class="user-header" id="userHeader" style="display:none;">
+      <div class="user-avatar" id="userAvatar"></div>
+      <div>
+        <h1 id="userName" style="font-size:1.5rem;margin-bottom:0.25rem;"></h1>
+        <div id="userRole" style="font-size:0.8rem;color:var(--accent);text-transform:uppercase;letter-spacing:0.5px;"></div>
+        <div id="userJoined" style="font-size:0.8rem;color:var(--text-muted);margin-top:0.25rem;"></div>
+        <div style="display:flex;gap:1.5rem;margin-top:0.75rem;">
+          <div style="text-align:center;"><div id="userStarted" style="font-size:1.5rem;font-weight:700;">0</div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">Started</div></div>
+          <div style="text-align:center;"><div id="userCompleted" style="font-size:1.5rem;font-weight:700;">0</div><div style="font-size:0.7rem;color:var(--text-muted);text-transform:uppercase;">Completed</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Currently Reading -->
+    <div class="scroll-section" id="readingSection" style="display:none;margin-bottom:1.5rem;">
+      <div class="section-header">
+        <h3>Currently Reading</h3>
+        <div class="scroll-nav">
+          <button onclick="scrollRow('readingRow', -1)">&#8249;</button>
+          <button onclick="scrollRow('readingRow', 1)">&#8250;</button>
+        </div>
+      </div>
+      <div class="scroll-row-wrap"><div class="scroll-row" id="readingRow"></div></div>
+    </div>
+
+    <!-- Reading Lists -->
+    <div class="scroll-section" id="listsSection" style="display:none;margin-bottom:1.5rem;">
+      <div class="section-header">
+        <h3>Reading Lists</h3>
+        <div class="scroll-nav">
+          <button onclick="scrollRow('listsRow', -1)">&#8249;</button>
+          <button onclick="scrollRow('listsRow', 1)">&#8250;</button>
+        </div>
+      </div>
+      <div class="scroll-row-wrap"><div class="scroll-row" id="listsRow"></div></div>
+    </div>
+
+    <!-- Ratings & Reviews -->
+    <div class="scroll-section" id="ratingsSection" style="display:none;margin-bottom:1.5rem;">
+      <div class="section-header">
+        <h3>Ratings & Reviews</h3>
+        <div class="scroll-nav">
+          <button onclick="scrollRow('ratingsRow', -1)">&#8249;</button>
+          <button onclick="scrollRow('ratingsRow', 1)">&#8250;</button>
+        </div>
+      </div>
+      <div class="scroll-row-wrap"><div class="scroll-row" id="ratingsRow"></div></div>
+    </div>
+
+    <!-- Bookmarks -->
+    <h3 id="bookmarksTitle" style="display:none;font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Bookmarks</h3>
+    <div id="bookmarksList" style="margin-bottom:2rem;"></div>
+
+    <!-- Completed -->
+    <div class="scroll-section" id="completedSection" style="display:none;margin-bottom:1.5rem;">
+      <div class="section-header">
+        <h3>Completed</h3>
+        <div class="scroll-nav">
+          <button onclick="scrollRow('completedRow', -1)">&#8249;</button>
+          <button onclick="scrollRow('completedRow', 1)">&#8250;</button>
+        </div>
+      </div>
+      <div class="scroll-row-wrap"><div class="scroll-row" id="completedRow"></div></div>
+    </div>
+
+    <div id="loadingState" style="text-align:center;padding:3rem;"><div class="spinner"></div></div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    var userId = getParam('id');
+
+    function scrollRow(id, dir) {
+      var row = document.getElementById(id);
+      if (!row) return;
+      row.scrollBy({ left: dir * row.clientWidth * 0.75, behavior: 'smooth' });
+    }
+
+    function initScrollFades() {
+      document.querySelectorAll('.scroll-row').forEach(function(row) {
+        function update() {
+          var wrap = row.parentElement;
+          if (!wrap) return;
+          var canScroll = row.scrollWidth > row.clientWidth + 10;
+          var nav = wrap.parentElement && wrap.parentElement.querySelector('.scroll-nav');
+          if (nav) nav.style.display = canScroll ? '' : 'none';
+        }
+        row.addEventListener('scroll', update, { passive: true });
+        requestAnimationFrame(update);
+        setTimeout(update, 500);
+      });
+    }
+
+    async function loadUser() {
+      if (!userId) { window.location.href = '/'; return; }
+
+      try {
+        var res = await fetch('/api/users/' + userId);
+        if (!res.ok) { window.location.href = '/'; return; }
+        var user = await res.json();
+
+        document.getElementById('loadingState').style.display = 'none';
+        document.getElementById('userHeader').style.display = 'flex';
+
+        var name = user.displayName || user.username;
+        document.title = name + ' — Longbox';
+        document.getElementById('userName').textContent = name;
+        document.getElementById('userRole').textContent = user.isAdmin ? 'Admin' : 'Member';
+        document.getElementById('userJoined').textContent = 'Joined ' + new Date(user.createdAt).toLocaleDateString();
+        document.getElementById('userStarted').textContent = user.stats.issuesStarted;
+        document.getElementById('userCompleted').textContent = user.stats.issuesCompleted;
+
+        var avatarEl = document.getElementById('userAvatar');
+        if (user.avatarPath) {
+          avatarEl.innerHTML = '<img src="/api/auth/avatar/' + user.avatarPath + '">';
+        } else {
+          avatarEl.textContent = name.charAt(0).toUpperCase();
+        }
+
+        // Currently Reading
+        var reading = (user.progress || []).filter(function(p) { return !p.is_read && p.current_page > 0; });
+        if (reading.length > 0) {
+          document.getElementById('readingSection').style.display = 'block';
+          document.getElementById('readingRow').innerHTML = reading.map(function(p) {
+            var thumb = p.thumbnail_path ? '/api/thumbnails/' + p.thumbnail_path : '';
+            var num = p.issue_number != null ? '#' + p.issue_number : '';
+            var pct = p.page_count ? Math.round((p.current_page / p.page_count) * 100) : 0;
+            var progressBar = p.current_page && p.page_count ? '<div class="sc-progress-bar"><div class="sc-progress-fill" style="width:' + pct + '%"></div></div>' : '';
+            return '<a class="scroll-card" href="/series.html?id=' + p.series_id + '">'
+              + (thumb ? '<img class="sc-img" src="' + esc(thumb) + '" alt="' + esc(p.title) + '" loading="lazy">' : '<div class="sc-placeholder">&#128214;</div>')
+              + progressBar
+              + '<div class="sc-info"><h4>' + (num || esc(p.title)) + '</h4><span class="sc-meta">' + esc(p.series_name || '') + '</span></div></a>';
+          }).join('');
+        }
+
+        // Reading Lists
+        if (user.lists && user.lists.length > 0) {
+          document.getElementById('listsSection').style.display = 'block';
+          document.getElementById('listsRow').innerHTML = user.lists.map(function(l) {
+            var thumb = l.cover ? '/api/thumbnails/' + l.cover : '';
+            return '<div class="scroll-card" style="cursor:default;">'
+              + (thumb ? '<img class="sc-img" src="' + esc(thumb) + '" alt="' + esc(l.name) + '" loading="lazy">' : '<div class="sc-placeholder">&#128220;</div>')
+              + '<div class="sc-info"><h4>' + esc(l.name) + '</h4><span class="sc-meta">' + (l.item_count || 0) + ' issues</span></div></div>';
+          }).join('');
+        }
+
+        // Ratings
+        if (user.ratings && user.ratings.length > 0) {
+          document.getElementById('ratingsSection').style.display = 'block';
+          document.getElementById('ratingsRow').innerHTML = user.ratings.map(function(r) {
+            var thumb = r.thumbnail_path ? '/api/thumbnails/' + r.thumbnail_path : '';
+            var stars = '';
+            for (var i = 1; i <= 5; i++) stars += i <= r.rating ? '<span style="color:var(--accent);">&#9733;</span>' : '<span style="color:#555;">&#9733;</span>';
+            return '<a href="/series.html?id=' + r.series_id + '" style="text-decoration:none;color:inherit;display:inline-flex;width:260px;flex-shrink:0;background:var(--bg-secondary);border-radius:var(--radius);overflow:hidden;">'
+              + '<div style="flex-shrink:0;width:90px;">'
+              + (thumb ? '<img src="' + esc(thumb) + '" alt="' + esc(r.series_name) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">' : '<div style="width:100%;height:100%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted);">&#128218;</div>')
+              + '</div>'
+              + '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.75rem;gap:0.5rem;">'
+              + '<div style="font-size:1.5rem;letter-spacing:2px;">' + stars + '</div>'
+              + '<div style="font-size:0.8rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">' + esc(r.series_name) + '</div>'
+              + '</div></a>';
+          }).join('');
+        }
+
+        // Bookmarks
+        if (user.bookmarks && user.bookmarks.length > 0) {
+          document.getElementById('bookmarksTitle').style.display = '';
+          document.getElementById('bookmarksList').innerHTML = user.bookmarks.map(function(b) {
+            var thumb = b.thumbnail_path ? '/api/thumbnails/' + b.thumbnail_path : '';
+            var coverHtml = thumb
+              ? '<img src="' + esc(thumb) + '" alt="' + esc(b.issue_title) + '" style="width:45px;height:68px;object-fit:cover;border-radius:3px;flex-shrink:0;">'
+              : '<div style="width:45px;height:68px;background:var(--bg-card);border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;color:var(--text-muted);flex-shrink:0;">&#128214;</div>';
+            return '<div style="display:flex;align-items:center;gap:1rem;padding:0.75rem;background:var(--bg-secondary);border-radius:var(--radius);margin-bottom:0.5rem;">'
+              + coverHtml
+              + '<div style="flex:1;min-width:0;">'
+              + '<div style="font-size:0.85rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(b.series_name) + ' - ' + esc(b.issue_title) + '</div>'
+              + '<div style="font-size:0.75rem;color:var(--text-muted);margin-top:0.15rem;">Page ' + (b.page_number + 1) + '</div>'
+              + (b.note ? '<div style="font-size:0.75rem;color:var(--text-secondary);margin-top:0.25rem;font-style:italic;">' + esc(b.note) + '</div>' : '')
+              + '</div></div>';
+          }).join('');
+        }
+
+        // Completed
+        var completed = (user.progress || []).filter(function(p) { return p.is_read; });
+        if (completed.length > 0) {
+          document.getElementById('completedSection').style.display = 'block';
+          document.getElementById('completedRow').innerHTML = completed.map(function(p) {
+            var thumb = p.thumbnail_path ? '/api/thumbnails/' + p.thumbnail_path : '';
+            var num = p.issue_number != null ? '#' + p.issue_number : '';
+            return '<a class="scroll-card" href="/series.html?id=' + p.series_id + '">'
+              + '<div style="position:relative;">'
+              + (thumb ? '<img class="sc-img" src="' + esc(thumb) + '" alt="' + esc(p.title) + '" loading="lazy">' : '<div class="sc-placeholder">&#128214;</div>')
+              + '<div class="read-toggle" data-is-read="1" style="pointer-events:none;"></div>'
+              + '</div>'
+              + '<div class="sc-info"><h4>' + (num || esc(p.title)) + '</h4><span class="sc-meta">' + esc(p.series_name || '') + '</span></div></a>';
+          }).join('');
+        }
+
+        initScrollFades();
+
+      } catch(e) {
+        document.getElementById('loadingState').innerHTML = '<div style="color:var(--text-muted);">User not found</div>';
+      }
+    }
+
+    // Load navbar user
+    fetch('/api/auth/me').then(function(r) { return r.json(); }).then(function(user) {
+      if (user.authenticated) {
+        if (user.isAdmin) document.getElementById('adminLink').style.display = '';
+        var navAvatar = document.getElementById('profileInitial');
+        if (user.avatarPath) {
+          navAvatar.style.backgroundImage = 'url(/api/auth/avatar/' + user.avatarPath + ')';
+          navAvatar.style.backgroundSize = 'cover';
+          navAvatar.textContent = '';
+        } else {
+          navAvatar.textContent = (user.displayName || user.username).charAt(0).toUpperCase();
+        }
+        document.getElementById('profileName').textContent = user.displayName || user.username;
+      }
+    }).catch(function() {});
+
+    loadUser();
+  </script>
+<footer class="site-footer">
+  <div>&copy; 2026 <a href="https://outmaneuver.cargo.site/" target="_blank" rel="noopener">Outmaneuver</a></div>
+  <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button" data-slug="Outmaneuver" data-color="#101010" data-emoji="" data-font="Cookie" data-text="Buy me a coffee" data-outline-color="#ffffff" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+</footer>
+</body>
+</html>

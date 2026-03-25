@@ -130,6 +130,35 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_ratings_series ON ratings(series_id);
   `);
 
+  // Activity feed
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS activity (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      action_type TEXT NOT NULL,
+      series_id INTEGER,
+      issue_id INTEGER,
+      rating INTEGER,
+      list_name TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL,
+      FOREIGN KEY (issue_id) REFERENCES issues(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_activity_created ON activity(created_at DESC);
+    CREATE INDEX IF NOT EXISTS idx_activity_user ON activity(user_id);
+
+    CREATE TABLE IF NOT EXISTS activity_reactions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      activity_id INTEGER NOT NULL,
+      user_id INTEGER NOT NULL,
+      created_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE CASCADE,
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      UNIQUE(activity_id, user_id)
+    );
+  `);
+
   // Add display_name and avatar_path columns if they don't exist
   const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
   if (!cols.includes('display_name')) {

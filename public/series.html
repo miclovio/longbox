@@ -827,13 +827,27 @@
       });
     });
 
-    // Star click
+    // Star click — tap same star twice to clear rating
     starRow.addEventListener('click', function(e) {
       var star = e.target.closest('.star');
       if (!star) return;
-      myRating = parseInt(star.dataset.value);
+      var val = parseInt(star.dataset.value);
+      if (val === myRating) {
+        // Same star tapped — clear rating
+        myRating = 0;
+        fillStars(0);
+        if (myRatingId) {
+          fetch('/api/ratings/' + myRatingId, { method: 'DELETE' }).then(function() {
+            myRatingId = null;
+            document.getElementById('reviewText').value = '';
+            document.getElementById('addReviewLink').textContent = 'Add a review';
+            loadRatings();
+          });
+        }
+        return;
+      }
+      myRating = val;
       fillStars(myRating);
-      // Auto-save if no review text needed
       submitRating();
     });
 

@@ -255,6 +255,24 @@ router.post('/progress/:issueId', (req, res) => {
     }
   }
 
+  // Log activity when marking as completed — group by series within 10 minutes
+  if (is_read) {
+    const issue = db.prepare('SELECT series_id FROM issues WHERE id = ?').get(issueId);
+    if (issue) {
+      const recentSeries = db.prepare(
+        "SELECT id, issue_id FROM activity WHERE user_id = ? AND action_type = 'completed' AND series_id = ? AND created_at > datetime('now', '-10 minutes')"
+      ).get(userId, issue.series_id);
+      if (recentSeries) {
+        // Update existing activity to latest issue, refresh timestamp
+        db.prepare("UPDATE activity SET issue_id = ?, created_at = datetime('now') WHERE id = ?")
+          .run(issueId, recentSeries.id);
+      } else {
+        db.prepare('INSERT INTO activity (user_id, action_type, series_id, issue_id) VALUES (?, ?, ?, ?)')
+          .run(userId, 'completed', issue.series_id, issueId);
+      }
+    }
+  }
+
   res.json({ ok: true });
 });
 
@@ -433,6 +451,19 @@ router.post('/lists/:id/items', (req, res) => {
     const result = db.prepare(`
       INSERT INTO reading_list_items (list_id, issue_id, sort_order) VALUES (?, ?, ?)
     `).run(listId, issue_id, sortOrder);
+
+    // Log activity — one per series+list, not per issue
+    const issue = db.prepare('SELECT series_id FROM issues WHERE id = ?').get(issue_id);
+    if (issue) {
+      const recentAdd = db.prepare(
+        "SELECT id FROM activity WHERE user_id = ? AND action_type = 'added_to_list' AND series_id = ? AND list_name = ? AND created_at > datetime('now', '-5 minutes')"
+      ).get(userId, issue.series_id, list.name);
+      if (!recentAdd) {
+        db.prepare('INSERT INTO activity (user_id, action_type, series_id, list_name) VALUES (?, ?, ?, ?)')
+          .run(userId, 'added_to_list', issue.series_id, list.name);
+      }
+    }
+
     res.json({ ok: true, id: Number(result.lastInsertRowid) });
   } catch (err) {
     if (err.message.includes('UNIQUE')) {
@@ -558,12 +589,27 @@ router.post('/ratings', (req, res) => {
   if (existing) {
     db.prepare('UPDATE ratings SET rating = ?, review = ?, updated_at = datetime(\'now\') WHERE id = ?')
       .run(rating, review || null, existing.id);
+    // Update existing activity or create new one
+    const recentActivity = db.prepare(
+      "SELECT id FROM activity WHERE user_id = ? AND action_type = 'rated' AND series_id = ?"
+    ).get(userId, series_id);
+    if (recentActivity) {
+      db.prepare('UPDATE activity SET rating = ?, created_at = datetime(\'now\') WHERE id = ?')
+        .run(rating, recentActivity.id);
+    } else {
+      db.prepare('INSERT INTO activity (user_id, action_type, series_id, rating) VALUES (?, ?, ?, ?)')
+        .run(userId, 'rated', series_id, rating);
+    }
     return res.json({ ok: true, id: existing.id, updated: true });
   }
 
   const result = db.prepare(
     'INSERT INTO ratings (user_id, series_id, rating, review) VALUES (?, ?, ?, ?)'
   ).run(userId, series_id, rating, review || null);
+
+  // Log activity
+  db.prepare('INSERT INTO activity (user_id, action_type, series_id, rating) VALUES (?, ?, ?, ?)')
+    .run(userId, 'rated', series_id, rating);
 
   res.json({ ok: true, id: result.lastInsertRowid, updated: false });
 });
@@ -622,6 +668,168 @@ router.delete('/ratings/:id', (req, res) => {
 
   db.prepare('DELETE FROM ratings WHERE id = ?').run(id);
   res.json({ ok: true });
+});
+
+// ---- User Profiles (public) ----
+
+// GET /api/users/:id — public user profile
+router.get('/users/:id', (req, res) => {
+  const db = getDb();
+  const userId = parseInt(req.params.id, 10);
+
+  const user = db.prepare('SELECT id, username, display_name, avatar_path, is_admin, created_at FROM users WHERE id = ?').get(userId);
+  if (!user) return res.status(404).json({ error: 'User not found' });
+
+  const stats = db.prepare(`
+    SELECT
+      SUM(CASE WHEN current_page > 0 OR is_read = 1 THEN 1 ELSE 0 END) as started,
+      SUM(CASE WHEN is_read = 1 THEN 1 ELSE 0 END) as completed
+    FROM reading_progress WHERE user_id = ?
+  `).get(userId);
+
+  const ratings = db.prepare(`
+    SELECT r.id, r.series_id, r.rating, r.review, r.updated_at,
+           s.name as series_name, s.thumbnail_path, s.publisher
+    FROM ratings r
+    JOIN series s ON s.id = r.series_id
+    WHERE r.user_id = ?
+    ORDER BY r.updated_at DESC
+  `).all(userId);
+
+  // Reading progress
+  const progress = db.prepare(`
+    SELECT rp.issue_id, rp.current_page, rp.is_read,
+           i.title, i.issue_number, i.thumbnail_path, i.page_count, i.series_id,
+           s.name as series_name
+    FROM reading_progress rp
+    JOIN issues i ON i.id = rp.issue_id
+    JOIN series s ON s.id = i.series_id
+    WHERE rp.user_id = ?
+    ORDER BY rp.updated_at DESC
+  `).all(userId);
+
+  // Reading lists
+  const lists = db.prepare(`
+    SELECT rl.id, rl.name, COUNT(rli.id) as item_count
+    FROM reading_lists rl
+    LEFT JOIN reading_list_items rli ON rli.list_id = rl.id
+    WHERE rl.user_id = ?
+    GROUP BY rl.id
+    ORDER BY rl.created_at DESC
+  `).all(userId);
+
+  // Get first cover for each list
+  for (const l of lists) {
+    const firstItem = db.prepare(`
+      SELECT i.thumbnail_path FROM reading_list_items rli
+      JOIN issues i ON i.id = rli.issue_id
+      WHERE rli.list_id = ? AND i.thumbnail_path IS NOT NULL
+      ORDER BY rli.sort_order ASC LIMIT 1
+    `).get(l.id);
+    l.cover = firstItem ? firstItem.thumbnail_path : null;
+  }
+
+  // Bookmarks
+  const bookmarks = db.prepare(`
+    SELECT b.id, b.page_number, b.note, b.issue_id,
+           i.title as issue_title, i.thumbnail_path, i.series_id,
+           s.name as series_name
+    FROM bookmarks b
+    JOIN issues i ON i.id = b.issue_id
+    JOIN series s ON s.id = i.series_id
+    WHERE b.user_id = ?
+    ORDER BY b.created_at DESC
+  `).all(userId);
+
+  res.json({
+    id: user.id,
+    username: user.username,
+    displayName: user.display_name || user.username,
+    avatarPath: user.avatar_path || null,
+    isAdmin: user.is_admin === 1,
+    createdAt: user.created_at,
+    stats: {
+      issuesStarted: stats.started || 0,
+      issuesCompleted: stats.completed || 0,
+    },
+    ratings,
+    progress,
+    lists,
+    bookmarks,
+  });
+});
+
+// ---- Activity Feed ----
+
+// GET /api/activity — paginated feed (all users)
+router.get('/activity', (req, res) => {
+  const db = getDb();
+  const limit = parseInt(req.query.limit) || 30;
+  const offset = parseInt(req.query.offset) || 0;
+
+  const items = db.prepare(`
+    SELECT a.id, a.user_id, a.action_type, a.series_id, a.issue_id, a.rating, a.list_name, a.created_at,
+           u.username, u.display_name, u.avatar_path,
+           s.name as series_name, s.thumbnail_path as series_thumb,
+           i.title as issue_title, i.issue_number, i.thumbnail_path as issue_thumb,
+           (SELECT COUNT(*) FROM activity_reactions ar WHERE ar.activity_id = a.id) as reaction_count,
+           (SELECT COUNT(*) FROM activity_reactions ar WHERE ar.activity_id = a.id AND ar.user_id = ?) as user_reacted
+    FROM activity a
+    JOIN users u ON u.id = a.user_id
+    LEFT JOIN series s ON s.id = a.series_id
+    LEFT JOIN issues i ON i.id = a.issue_id
+    ORDER BY a.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(req.session.userId, limit, offset);
+
+  const total = db.prepare('SELECT COUNT(*) as c FROM activity').get().c;
+
+  res.json({ items, total, limit, offset });
+});
+
+// GET /api/activity/user/:id — feed for a specific user
+router.get('/activity/user/:id', (req, res) => {
+  const db = getDb();
+  const targetUserId = parseInt(req.params.id, 10);
+  const limit = parseInt(req.query.limit) || 30;
+  const offset = parseInt(req.query.offset) || 0;
+
+  const items = db.prepare(`
+    SELECT a.id, a.user_id, a.action_type, a.series_id, a.issue_id, a.rating, a.list_name, a.created_at,
+           u.username, u.display_name, u.avatar_path,
+           s.name as series_name, s.thumbnail_path as series_thumb,
+           i.title as issue_title, i.issue_number, i.thumbnail_path as issue_thumb,
+           (SELECT COUNT(*) FROM activity_reactions ar WHERE ar.activity_id = a.id) as reaction_count,
+           (SELECT COUNT(*) FROM activity_reactions ar WHERE ar.activity_id = a.id AND ar.user_id = ?) as user_reacted
+    FROM activity a
+    JOIN users u ON u.id = a.user_id
+    LEFT JOIN series s ON s.id = a.series_id
+    LEFT JOIN issues i ON i.id = a.issue_id
+    WHERE a.user_id = ?
+    ORDER BY a.created_at DESC
+    LIMIT ? OFFSET ?
+  `).all(req.session.userId, targetUserId, limit, offset);
+
+  res.json({ items, limit, offset });
+});
+
+// POST /api/activity/:id/react — toggle reaction
+router.post('/activity/:id/react', (req, res) => {
+  const db = getDb();
+  const userId = req.session.userId;
+  const activityId = parseInt(req.params.id, 10);
+
+  const existing = db.prepare('SELECT id FROM activity_reactions WHERE activity_id = ? AND user_id = ?')
+    .get(activityId, userId);
+
+  if (existing) {
+    db.prepare('DELETE FROM activity_reactions WHERE id = ?').run(existing.id);
+    res.json({ ok: true, reacted: false });
+  } else {
+    db.prepare('INSERT INTO activity_reactions (activity_id, user_id) VALUES (?, ?)')
+      .run(activityId, userId);
+    res.json({ ok: true, reacted: true });
+  }
 });
 
 module.exports = router;
