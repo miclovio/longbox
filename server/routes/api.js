@@ -541,4 +541,87 @@ router.get('/thumbnails/:filename', (req, res) => {
   res.sendFile(path.resolve(thumbPath));
 });
 
+// ---- Ratings & Reviews ----
+
+// POST /api/ratings — create or update a rating
+router.post('/ratings', (req, res) => {
+  const db = getDb();
+  const userId = req.session.userId;
+  const { series_id, rating, review } = req.body;
+
+  if (!series_id || !rating || rating < 1 || rating > 5) {
+    return res.status(400).json({ error: 'series_id and rating (1-5) are required' });
+  }
+
+  const existing = db.prepare('SELECT id FROM ratings WHERE user_id = ? AND series_id = ?').get(userId, series_id);
+
+  if (existing) {
+    db.prepare('UPDATE ratings SET rating = ?, review = ?, updated_at = datetime(\'now\') WHERE id = ?')
+      .run(rating, review || null, existing.id);
+    return res.json({ ok: true, id: existing.id, updated: true });
+  }
+
+  const result = db.prepare(
+    'INSERT INTO ratings (user_id, series_id, rating, review) VALUES (?, ?, ?, ?)'
+  ).run(userId, series_id, rating, review || null);
+
+  res.json({ ok: true, id: result.lastInsertRowid, updated: false });
+});
+
+// GET /api/ratings/series/:id — all ratings for a series
+router.get('/ratings/series/:id', (req, res) => {
+  const db = getDb();
+  const seriesId = parseInt(req.params.id, 10);
+
+  const ratings = db.prepare(`
+    SELECT r.id, r.rating, r.review, r.created_at, r.updated_at, r.user_id,
+           u.username, u.display_name, u.avatar_path
+    FROM ratings r
+    JOIN users u ON u.id = r.user_id
+    WHERE r.series_id = ?
+    ORDER BY r.updated_at DESC
+  `).all(seriesId);
+
+  // Average
+  const avg = db.prepare('SELECT AVG(rating) as avg, COUNT(*) as count FROM ratings WHERE series_id = ?').get(seriesId);
+
+  res.json({
+    ratings,
+    average: avg.avg ? Math.round(avg.avg * 10) / 10 : null,
+    count: avg.count,
+  });
+});
+
+// GET /api/ratings/me — current user's ratings
+router.get('/ratings/me', (req, res) => {
+  const db = getDb();
+  const userId = req.session.userId;
+
+  const ratings = db.prepare(`
+    SELECT r.id, r.series_id, r.rating, r.review, r.updated_at,
+           s.name as series_name, s.thumbnail_path, s.publisher
+    FROM ratings r
+    JOIN series s ON s.id = r.series_id
+    WHERE r.user_id = ?
+    ORDER BY r.updated_at DESC
+  `).all(userId);
+
+  res.json(ratings);
+});
+
+// DELETE /api/ratings/:id — delete own rating
+router.delete('/ratings/:id', (req, res) => {
+  const db = getDb();
+  const userId = req.session.userId;
+  const id = parseInt(req.params.id, 10);
+
+  const rating = db.prepare('SELECT * FROM ratings WHERE id = ? AND user_id = ?').get(id, userId);
+  if (!rating) {
+    return res.status(404).json({ error: 'Rating not found' });
+  }
+
+  db.prepare('DELETE FROM ratings WHERE id = ?').run(id);
+  res.json({ ok: true });
+});
+
 module.exports = router;

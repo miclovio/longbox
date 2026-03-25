@@ -40,6 +40,149 @@
       color: white;
     }
 
+    /* ---- Rating Stars ---- */
+    .rating-widget {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.75rem;
+      flex-wrap: wrap;
+    }
+
+    .star-row {
+      display: inline-flex;
+      gap: 2px;
+    }
+
+    .star-row .star {
+      font-size: 1.4rem;
+      cursor: pointer;
+      color: #555;
+      transition: color 0.15s;
+      -webkit-user-select: none;
+      user-select: none;
+      padding: 2px;
+    }
+
+    .star-row .star.filled { color: var(--accent); }
+    .star-row .star:hover { color: var(--accent); }
+
+    .star-row.hovering .star.preview { color: var(--accent); }
+    .star-row.hovering .star:not(.preview) { color: #555; }
+
+    .rating-avg {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .rating-avg strong {
+      color: var(--accent);
+      font-size: 0.9rem;
+    }
+
+    .add-review-link {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      text-decoration: underline;
+      transition: color 0.15s;
+    }
+
+    .add-review-link:hover { color: var(--accent); }
+
+    .review-form {
+      display: none;
+      margin-top: 0.75rem;
+      width: 100%;
+    }
+
+    .review-form textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 0.6rem;
+      background: #1a1a1a;
+      border: 1px solid #333;
+      border-radius: 6px;
+      color: #fff;
+      font-size: 0.85rem;
+      font-family: inherit;
+      resize: vertical;
+    }
+
+    .review-form textarea:focus { border-color: var(--accent); outline: none; }
+
+    /* ---- Reviews List ---- */
+    .reviews-section {
+      margin-top: 2rem;
+    }
+
+    .review-item {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.75rem;
+      background: var(--bg-secondary);
+      border-radius: var(--radius);
+      margin-bottom: 0.5rem;
+    }
+
+    .review-item .rev-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: white;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+
+    .review-item .rev-body { flex: 1; min-width: 0; }
+
+    .review-item .rev-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .review-item .rev-name { font-size: 0.82rem; font-weight: 600; }
+
+    .review-item .rev-stars {
+      font-size: 0.75rem;
+      color: var(--accent);
+    }
+
+    .review-item .rev-date {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-left: auto;
+    }
+
+    .review-item .rev-text {
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .review-item .rev-delete {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 0.85rem;
+      padding: 0.2rem;
+    }
+
+    .review-item .rev-delete:hover { color: #e74c3c; }
+
+    @media (max-width: 480px) {
+      .star-row .star { font-size: 1.4rem; padding: 4px; }
+    }
+
     /* ---- List Popover (modern dropdown) ---- */
     .list-popover {
       position: fixed;
@@ -159,6 +302,25 @@
           <button id="btnAddSeriesList" title="Add to List" style="width:32px;height:32px;border:none;border-radius:8px;background:rgba(0,0,0,0.5);backdrop-filter:blur(4px);color:rgba(255,255,255,0.7);font-size:1.1rem;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;transition:all 0.2s;" onmouseover="this.style.background='var(--accent)';this.style.color='white';" onmouseout="this.style.background='rgba(0,0,0,0.5)';this.style.color='rgba(255,255,255,0.7)';">&#43;</button>
           <button class="btn btn-primary" id="btnMatchCV" style="display:none;">Match Comic Vine</button>
         </div>
+        <!-- Rating Widget -->
+        <div class="rating-widget" id="ratingWidget">
+          <div class="star-row" id="starRow">
+            <span class="star" data-value="1">&#9733;</span>
+            <span class="star" data-value="2">&#9733;</span>
+            <span class="star" data-value="3">&#9733;</span>
+            <span class="star" data-value="4">&#9733;</span>
+            <span class="star" data-value="5">&#9733;</span>
+          </div>
+          <span class="rating-avg" id="ratingAvg"></span>
+          <span class="add-review-link" id="addReviewLink" onclick="toggleReviewForm()">Add a review</span>
+        </div>
+        <div class="review-form" id="reviewForm">
+          <textarea id="reviewText" placeholder="Write your review (optional)..."></textarea>
+          <div style="display:flex;gap:0.5rem;margin-top:0.5rem;">
+            <button class="btn btn-primary" onclick="submitRating()">Save</button>
+            <button class="btn btn-secondary" onclick="closeReviewForm()">Cancel</button>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -173,6 +335,12 @@
       </select>
     </div>
     <div class="grid" id="grid"></div>
+
+    <!-- Reviews Section -->
+    <div class="reviews-section" id="reviewsSection" style="display:none;">
+      <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Reviews</h2>
+      <div id="reviewsList"></div>
+    </div>
   </div>
 
   <!-- Comic Vine Match Modal -->
@@ -631,6 +799,144 @@
       }, 0);
     });
 
+    // ---- Ratings & Reviews ----
+    var myRating = 0;
+    var myRatingId = null;
+
+    function fillStars(n) {
+      document.querySelectorAll('#starRow .star').forEach(function(s) {
+        s.classList.toggle('filled', parseInt(s.dataset.value) <= n);
+      });
+    }
+
+    // Star hover preview
+    var starRow = document.getElementById('starRow');
+    starRow.addEventListener('mouseover', function(e) {
+      var star = e.target.closest('.star');
+      if (!star) return;
+      var val = parseInt(star.dataset.value);
+      starRow.classList.add('hovering');
+      document.querySelectorAll('#starRow .star').forEach(function(s) {
+        s.classList.toggle('preview', parseInt(s.dataset.value) <= val);
+      });
+    });
+    starRow.addEventListener('mouseleave', function() {
+      starRow.classList.remove('hovering');
+      document.querySelectorAll('#starRow .star').forEach(function(s) {
+        s.classList.remove('preview');
+      });
+    });
+
+    // Star click
+    starRow.addEventListener('click', function(e) {
+      var star = e.target.closest('.star');
+      if (!star) return;
+      myRating = parseInt(star.dataset.value);
+      fillStars(myRating);
+      // Auto-save if no review text needed
+      submitRating();
+    });
+
+    var reviewFormOpen = false;
+    function toggleReviewForm() {
+      reviewFormOpen = !reviewFormOpen;
+      var form = document.getElementById('reviewForm');
+      form.style.display = reviewFormOpen ? 'block' : 'none';
+      if (reviewFormOpen) {
+        document.getElementById('reviewText').focus();
+      }
+    }
+    function closeReviewForm() {
+      reviewFormOpen = false;
+      document.getElementById('reviewForm').style.display = 'none';
+    }
+
+    async function submitRating() {
+      if (myRating === 0) return;
+      var review = document.getElementById('reviewText').value.trim();
+      var res = await fetch('/api/ratings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ series_id: parseInt(seriesId), rating: myRating, review: review || null }),
+      });
+      if (res.ok) {
+        closeReviewForm();
+        loadRatings();
+      }
+    }
+
+    async function loadRatings() {
+      try {
+        var res = await fetch('/api/ratings/series/' + seriesId);
+        var data = await res.json();
+
+        // Update average display
+        var avgEl = document.getElementById('ratingAvg');
+        if (data.count > 0) {
+          avgEl.innerHTML = '<strong>' + data.average + '</strong> from ' + data.count + (data.count === 1 ? ' rating' : ' ratings');
+        } else {
+          avgEl.textContent = '';
+        }
+
+        // Check if current user has rated
+        var meRes = await fetch('/api/auth/me');
+        var me = await meRes.json();
+        var myReview = null;
+        for (var i = 0; i < data.ratings.length; i++) {
+          if (data.ratings[i].user_id === me.id) {
+            myRating = data.ratings[i].rating;
+            myRatingId = data.ratings[i].id;
+            myReview = data.ratings[i];
+            break;
+          }
+        }
+        fillStars(myRating);
+        if (myReview && myReview.review) {
+          document.getElementById('reviewText').value = myReview.review;
+          document.getElementById('addReviewLink').textContent = 'Edit review';
+        }
+
+        // Render reviews
+        var section = document.getElementById('reviewsSection');
+        var list = document.getElementById('reviewsList');
+        var reviewsWithText = data.ratings.filter(function(r) { return r.review; });
+
+        if (reviewsWithText.length > 0) {
+          section.style.display = 'block';
+          list.innerHTML = reviewsWithText.map(function(r) {
+            var name = r.display_name || r.username;
+            var avatarHtml = r.avatar_path
+              ? '<img src="/api/auth/avatar/' + esc(r.avatar_path) + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">'
+              : esc(name.charAt(0).toUpperCase());
+            var stars = '';
+            for (var i = 1; i <= 5; i++) stars += i <= r.rating ? '&#9733;' : '&#9734;';
+            var date = new Date(r.updated_at).toLocaleDateString();
+            var deleteBtn = r.user_id === me.id ? ' <button class="rev-delete" onclick="deleteRating(' + r.id + ')" title="Delete">&#10005;</button>' : '';
+            return '<div class="review-item">'
+              + '<div class="rev-avatar">' + avatarHtml + '</div>'
+              + '<div class="rev-body">'
+              + '<div class="rev-header"><span class="rev-name">' + esc(name) + '</span><span class="rev-stars">' + stars + '</span><span class="rev-date">' + date + '</span>' + deleteBtn + '</div>'
+              + '<div class="rev-text">' + esc(r.review) + '</div>'
+              + '</div></div>';
+          }).join('');
+        } else {
+          section.style.display = 'none';
+        }
+      } catch (e) {}
+    }
+
+    async function deleteRating(id) {
+      var res = await fetch('/api/ratings/' + id, { method: 'DELETE' });
+      if (res.ok) {
+        myRating = 0;
+        myRatingId = null;
+        fillStars(0);
+        document.getElementById('reviewText').value = '';
+        document.getElementById('addReviewLink').textContent = 'Add a review';
+        loadRatings();
+      }
+    }
+
     async function start() {
       fetch('/api/series').then(function(r) { return r.json(); }).then(function(all) {
         document.getElementById('breadcrumbMeta').textContent = all.length + ' series';
@@ -638,6 +944,7 @@
       await loadProgressData();
       await loadUserLists();
       await loadSeries();
+      loadRatings();
       const saved = sessionStorage.getItem('series_scroll_' + seriesId);
       if (saved) {
         requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));

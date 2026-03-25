@@ -112,6 +112,24 @@ function migrate(db) {
     CREATE INDEX IF NOT EXISTS idx_bookmarks_user ON bookmarks(user_id);
   `);
 
+  // Ratings & reviews
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS ratings (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      series_id INTEGER NOT NULL,
+      rating INTEGER NOT NULL CHECK(rating >= 1 AND rating <= 5),
+      review TEXT,
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now')),
+      FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+      FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE,
+      UNIQUE(user_id, series_id)
+    );
+    CREATE INDEX IF NOT EXISTS idx_ratings_user ON ratings(user_id);
+    CREATE INDEX IF NOT EXISTS idx_ratings_series ON ratings(series_id);
+  `);
+
   // Add display_name and avatar_path columns if they don't exist
   const cols = db.prepare("PRAGMA table_info(users)").all().map(c => c.name);
   if (!cols.includes('display_name')) {

@@ -135,6 +135,7 @@
       overflow-x: auto;
       padding-bottom: 0.5rem;
       scroll-behavior: smooth;
+      overscroll-behavior-x: contain;
       -webkit-overflow-scrolling: touch;
       scrollbar-width: none;
     }
@@ -529,6 +530,7 @@
           <option value="issue_count-desc">Most Issues</option>
           <option value="issue_count-asc">Fewest Issues</option>
           <option value="created_at-desc">Recently Added</option>
+          <option value="avg_rating-desc">Highest Rated</option>
         </select>
         <div class="search-container search-inline">
           <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
@@ -624,21 +626,60 @@
           <button class="btn btn-secondary" onclick="document.getElementById('editNameForm').style.display='none';">Cancel</button>
         </div>
       </div>
-      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Currently Reading</h3>
-      <div class="grid" id="profileReading" style="margin-bottom:2rem;"></div>
+      <div class="scroll-section" id="profileReadingSection" style="display:none;margin-bottom:1.5rem;">
+        <div class="section-header">
+          <h3>Currently Reading</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('profileReadingRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('profileReadingRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="profileReadingRow"></div></div>
+      </div>
       <div id="profileReadingEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No issues in progress.</div>
+      <div style="display:none;" id="profileReading"></div>
 
-      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Reading Lists</h3>
-      <div class="grid" id="profileLists" style="margin-bottom:2rem;"></div>
+      <div class="scroll-section" id="profileListsSection" style="display:none;margin-bottom:1.5rem;">
+        <div class="section-header">
+          <h3>Reading Lists</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('profileListsRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('profileListsRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="profileListsRow"></div></div>
+      </div>
       <div id="profileListsEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No reading lists yet.</div>
+      <div style="display:none;" id="profileLists"></div>
 
-      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Bookmarks</h3>
+      <div class="scroll-section" id="profileRatingsSection" style="display:none;margin-bottom:1.5rem;">
+        <div class="section-header">
+          <h3>My Ratings & Reviews</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('profileRatingsRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('profileRatingsRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="profileRatingsRow"></div></div>
+      </div>
+      <div id="profileRatingsEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No ratings yet. Rate a series to see it here.</div>
+
+      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;" id="profileBookmarksTitle" style="display:none;">Bookmarks</h3>
       <div id="profileBookmarks" style="margin-bottom:2rem;"></div>
       <div id="profileBookmarksEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;margin-bottom:2rem;">No bookmarks yet. Use the star button in the reader to bookmark pages.</div>
 
-      <h3 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Completed</h3>
-      <div class="grid" id="profileRead" style="margin-bottom:2rem;"></div>
+      <div class="scroll-section" id="profileReadSection" style="display:none;margin-bottom:1.5rem;">
+        <div class="section-header">
+          <h3>Completed</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('profileReadRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('profileReadRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="profileReadRow"></div></div>
+      </div>
       <div id="profileReadEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;">No completed issues yet.</div>
+      <div style="display:none;" id="profileRead"></div>
     </div>
   </div>
 
@@ -658,11 +699,14 @@
         function update() {
           const wrap = row.parentElement;
           if (!wrap) return;
+          var canScroll = row.scrollWidth > row.clientWidth + 10;
           wrap.classList.toggle('can-scroll-left', row.scrollLeft > 10);
           wrap.classList.toggle('can-scroll-right', row.scrollLeft < row.scrollWidth - row.clientWidth - 10);
+          // Hide arrows if content fits
+          var nav = wrap.parentElement && wrap.parentElement.querySelector('.scroll-nav');
+          if (nav) nav.style.display = canScroll ? '' : 'none';
         }
         row.addEventListener('scroll', update, { passive: true });
-        // Initial check after content loads
         requestAnimationFrame(update);
         setTimeout(update, 500);
       });
@@ -673,9 +717,18 @@
     async function loadSeries() {
       const res = await fetch('/api/series');
       allSeries = await res.json();
+
+      // Load user's ratings to attach to series for sorting
+      try {
+        var ratRes = await fetch('/api/ratings/me');
+        var myRatings = await ratRes.json();
+        var ratingMap = {};
+        for (var i = 0; i < myRatings.length; i++) ratingMap[myRatings[i].series_id] = myRatings[i].rating;
+        for (var j = 0; j < allSeries.length; j++) allSeries[j].avg_rating = ratingMap[allSeries[j].id] || 0;
+      } catch(e) {}
+
       renderSeries();
       renderHomeRows();
-      // Re-render publishers if that tab is active
       if (sessionStorage.getItem('active_tab') === 'publishers') renderPublishers();
     }
 
@@ -1101,48 +1154,44 @@
         const reading = progress.filter(p => !p.is_read && p.current_page > 0);
         const completed = progress.filter(p => p.is_read);
 
-        const readingGrid = document.getElementById('profileReading');
-        const readingEmpty = document.getElementById('profileReadingEmpty');
+        // Currently Reading
         if (reading.length > 0) {
-          readingGrid.style.display = 'grid';
-          readingGrid.innerHTML = reading.map(p => issueCard(p)).join('');
-        } else {
-          readingGrid.style.display = 'none';
-          readingEmpty.style.display = 'block';
-        }
-
-        const readGrid = document.getElementById('profileRead');
-        const readEmpty = document.getElementById('profileReadEmpty');
-        if (completed.length > 0) {
-          readGrid.style.display = 'grid';
-          readGrid.innerHTML = completed.map(p => {
-            const thumb = p.thumbnail_path ? `/api/thumbnails/${p.thumbnail_path}` : '';
-            const num = p.issue_number != null ? '#' + p.issue_number : '';
-            return `
-              <a class="card is-read" href="/reader.html?id=${p.issue_id || p.id}">
-                <div class="card-img-wrap">
-                  ${thumb ? `<img src="${thumb}" alt="${esc(p.title)}" loading="lazy">` : `<div class="card-placeholder">&#128214;</div>`}
-                  <div class="read-toggle" data-is-read="1" style="pointer-events:none;"></div>
-                </div>
-                <div class="card-info">
-                  <h3 title="${esc(p.title)}">${num || esc(p.title)}</h3>
-                  <span class="meta">${esc(p.series_name || '')}</span>
-                </div>
-              </a>`;
+          document.getElementById('profileReadingSection').style.display = 'block';
+          document.getElementById('profileReadingRow').innerHTML = reading.map(function(p) {
+            var thumb = p.thumbnail_path ? '/api/thumbnails/' + p.thumbnail_path : '';
+            var num = p.issue_number != null ? '#' + p.issue_number : '';
+            var pct = p.page_count ? Math.round((p.current_page / p.page_count) * 100) : 0;
+            var progressBar = p.current_page && p.page_count ? '<div class="sc-progress-bar"><div class="sc-progress-fill" style="width:' + pct + '%"></div></div>' : '';
+            return '<a class="scroll-card" href="/reader.html?id=' + (p.issue_id || p.id) + '&page=' + (p.current_page || 0) + '">'
+              + (thumb ? '<img class="sc-img" src="' + esc(thumb) + '" alt="' + esc(p.title) + '" loading="lazy">' : '<div class="sc-placeholder">&#128214;</div>')
+              + progressBar
+              + '<div class="sc-info"><h4>' + (num || esc(p.title)) + '</h4><span class="sc-meta">' + esc(p.series_name || '') + '</span></div></a>';
           }).join('');
         } else {
-          readGrid.style.display = 'none';
-          readEmpty.style.display = 'block';
+          document.getElementById('profileReadingEmpty').style.display = 'block';
+        }
+
+        // Completed
+        if (completed.length > 0) {
+          document.getElementById('profileReadSection').style.display = 'block';
+          document.getElementById('profileReadRow').innerHTML = completed.map(function(p) {
+            var thumb = p.thumbnail_path ? '/api/thumbnails/' + p.thumbnail_path : '';
+            var num = p.issue_number != null ? '#' + p.issue_number : '';
+            return '<a class="scroll-card" href="/reader.html?id=' + (p.issue_id || p.id) + '">'
+              + '<div style="position:relative;">'
+              + (thumb ? '<img class="sc-img" src="' + esc(thumb) + '" alt="' + esc(p.title) + '" loading="lazy">' : '<div class="sc-placeholder">&#128214;</div>')
+              + '<div class="read-toggle" data-is-read="1" style="pointer-events:none;"></div>'
+              + '</div>'
+              + '<div class="sc-info"><h4>' + (num || esc(p.title)) + '</h4><span class="sc-meta">' + esc(p.series_name || '') + '</span></div></a>';
+          }).join('');
+        } else {
+          document.getElementById('profileReadEmpty').style.display = 'block';
         }
 
         // Load reading lists
         const listsRes = await fetch('/api/lists');
         const lists = await listsRes.json();
-        const listsGrid = document.getElementById('profileLists');
-        const listsEmpty = document.getElementById('profileListsEmpty');
-
         if (lists.length > 0) {
-          // Fetch items for mosaic
           for (const l of lists) {
             try {
               const dr = await fetch(`/api/lists/${l.id}`);
@@ -1150,21 +1199,46 @@
               l.items = dd.items || [];
             } catch(e) { l.items = []; }
           }
-          listsGrid.style.display = 'grid';
-          listsGrid.innerHTML = lists.map(l => {
-            return `
-              <div class="card" onclick="document.querySelector('[data-tab=lists]').click();setTimeout(()=>openListDetail(${l.id}),100);" style="cursor:pointer;">
-                <div class="card-img-wrap">${buildListCover(l.items)}</div>
-                <div class="card-info">
-                  <h3>${esc(l.name)}</h3>
-                  <span class="meta">${l.item_count || 0} issues</span>
-                </div>
-              </div>`;
+          document.getElementById('profileListsSection').style.display = 'block';
+          document.getElementById('profileListsRow').innerHTML = lists.map(function(l) {
+            var cover = (l.items || []).find(function(i) { return i.thumbnail_path; });
+            var thumb = cover ? '/api/thumbnails/' + cover.thumbnail_path : '';
+            return '<div class="scroll-card" onclick="document.querySelector(\'[data-tab=lists]\').click();setTimeout(function(){openListDetail(' + l.id + ')},100);" style="cursor:pointer;">'
+              + (thumb ? '<img class="sc-img" src="' + esc(thumb) + '" alt="' + esc(l.name) + '" loading="lazy">' : '<div class="sc-placeholder">&#128220;</div>')
+              + '<div class="sc-info"><h4>' + esc(l.name) + '</h4><span class="sc-meta">' + (l.item_count || 0) + ' issues</span></div></div>';
           }).join('');
         } else {
-          listsGrid.style.display = 'none';
-          listsEmpty.style.display = 'block';
+          document.getElementById('profileListsEmpty').style.display = 'block';
         }
+
+        // Load ratings
+        try {
+          const ratRes = await fetch('/api/ratings/me');
+          const myRatings = await ratRes.json();
+          const ratRow = document.getElementById('profileRatingsRow');
+          const ratEmpty = document.getElementById('profileRatingsEmpty');
+
+          if (myRatings.length > 0) {
+            document.getElementById('profileRatingsSection').style.display = 'block';
+            ratEmpty.style.display = 'none';
+            ratRow.innerHTML = myRatings.map(function(r) {
+              var thumb = r.thumbnail_path ? '/api/thumbnails/' + r.thumbnail_path : '';
+              var stars = '';
+              for (var i = 1; i <= 5; i++) stars += i <= r.rating ? '<span style="color:var(--accent);">&#9733;</span>' : '<span style="color:#555;">&#9733;</span>';
+              return '<a href="/series.html?id=' + r.series_id + '" style="text-decoration:none;color:inherit;display:inline-flex;width:260px;flex-shrink:0;background:var(--bg-secondary);border-radius:var(--radius);overflow:hidden;">'
+                + '<div style="flex-shrink:0;width:90px;">'
+                + (thumb ? '<img src="' + esc(thumb) + '" alt="' + esc(r.series_name) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">' : '<div style="width:100%;height:100%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted);">&#128218;</div>')
+                + '</div>'
+                + '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0.75rem;gap:0.5rem;">'
+                + '<div style="font-size:1.5rem;letter-spacing:2px;">' + stars + '</div>'
+                + '<div style="font-size:0.8rem;color:var(--text-secondary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">' + esc(r.series_name) + '</div>'
+                + '</div></a>';
+            }).join('');
+          } else {
+            document.getElementById('profileRatingsSection').style.display = 'none';
+            ratEmpty.style.display = 'block';
+          }
+        } catch(e) {}
 
         // Load bookmarks
         const bkRes = await fetch('/api/bookmarks');
@@ -1173,6 +1247,7 @@
         const bkEmpty = document.getElementById('profileBookmarksEmpty');
 
         if (bookmarks.length > 0) {
+          document.getElementById('profileBookmarksTitle').style.display = '';
           bkList.style.display = 'block';
           bkEmpty.style.display = 'none';
           bkList.innerHTML = bookmarks.map(b => {
@@ -1198,6 +1273,7 @@
           bkList.style.display = 'none';
           bkEmpty.style.display = 'block';
         }
+        initScrollFades();
       } catch (e) { console.error('Profile load error:', e); }
     }
 
@@ -1375,11 +1451,14 @@
       var swipeStartY = 0;
       var swipeLocked = false;
 
+      var swipeStartedInScrollRow = false;
+
       document.addEventListener('touchstart', function(e) {
         if (e.touches.length !== 1) return;
         swipeStartX = e.touches[0].clientX;
         swipeStartY = e.touches[0].clientY;
         swipeLocked = false;
+        swipeStartedInScrollRow = !!e.target.closest('.scroll-row');
       }, { passive: true });
 
       document.addEventListener('touchmove', function(e) {
@@ -1394,7 +1473,7 @@
 
       document.addEventListener('touchend', function(e) {
         if (swipeLocked) return;
-        // Don't trigger inside navbar or reader
+        if (swipeStartedInScrollRow) return;
         if (e.target.closest('.navbar')) return;
 
         var dx = e.changedTouches[0].clientX - swipeStartX;
