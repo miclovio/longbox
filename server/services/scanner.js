@@ -222,6 +222,17 @@ async function scanSeriesFolder(db, basePath, seriesName, seriesPath, thumbDir, 
             .run(fileStat.size, pages.length, existing.id);
           stats.issuesUpdated++;
         }
+
+        // Regenerate missing thumbnail
+        if (!existing.thumbnail_path) {
+          try {
+            const thumbFile = await generateThumbnail(fullPath, thumbDir, existing.id);
+            if (thumbFile) {
+              db.prepare('UPDATE issues SET thumbnail_path = ? WHERE id = ?').run(thumbFile, existing.id);
+            }
+          } catch (e) {}
+        }
+
         issueCount++;
         continue;
       }
