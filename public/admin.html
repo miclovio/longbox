@@ -153,8 +153,8 @@
     </nav>
     <div class="spacer"></div>
     <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
-      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
-      <span id="profileName"></span>
+      <span id="profileInitial" style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:white;overflow:hidden;"></span>
+
     </a>
   </header>
 
@@ -440,7 +440,6 @@
         } else {
           navAvatar.textContent = (user.displayName || user.username).charAt(0).toUpperCase();
         }
-        document.getElementById('profileName').textContent = user.displayName || user.username;
       }
     }).catch(() => {});
 

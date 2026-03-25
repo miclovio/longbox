@@ -575,8 +575,7 @@
       <input type="text" id="searchInput" placeholder="Search series..." autocomplete="off">
     </div>
     <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
-      <span id="profileInitial" style="width:26px;height:26px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.75rem;font-weight:700;color:white;"></span>
-      <span id="profileName"></span>
+      <span id="profileInitial" style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:white;overflow:hidden;"></span>
     </a>
   </header>
 
@@ -605,18 +604,6 @@
         <div class="scroll-row-wrap"><div class="scroll-row" id="continueRow"></div></div>
       </div>
 
-      <!-- Recently Added -->
-      <div class="scroll-section" id="recentAddedSection" style="display:none;">
-        <div class="section-header">
-          <h3>Recently Added</h3>
-          <div class="scroll-nav">
-            <button onclick="scrollRow('recentAddedRow', -1)">&#8249;</button>
-            <button onclick="scrollRow('recentAddedRow', 1)">&#8250;</button>
-          </div>
-        </div>
-        <div class="scroll-row-wrap"><div class="scroll-row" id="recentAddedRow"></div></div>
-      </div>
-
       <!-- Recently Released -->
       <div class="scroll-section" id="recentReleasedSection" style="display:none;">
         <div class="section-header">
@@ -627,6 +614,18 @@
           </div>
         </div>
         <div class="scroll-row-wrap"><div class="scroll-row" id="recentReleasedRow"></div></div>
+      </div>
+
+      <!-- Recently Added -->
+      <div class="scroll-section" id="recentAddedSection" style="display:none;">
+        <div class="section-header">
+          <h3>Recently Added</h3>
+          <div class="scroll-nav">
+            <button onclick="scrollRow('recentAddedRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('recentAddedRow', 1)">&#8250;</button>
+          </div>
+        </div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="recentAddedRow"></div></div>
       </div>
 
       <!-- Trending -->
@@ -641,16 +640,16 @@
         <div class="scroll-row-wrap"><div class="scroll-row" id="trendingRow"></div></div>
       </div>
 
-      <!-- All Series -->
-      <div class="scroll-section">
+      <!-- Highest Rated -->
+      <div class="scroll-section" id="highestRatedSection" style="display:none;">
         <div class="section-header">
-          <h3>All Series</h3>
+          <h3>Highest Rated</h3>
           <div class="scroll-nav">
-            <button onclick="scrollRow('allSeriesRow', -1)">&#8249;</button>
-            <button onclick="scrollRow('allSeriesRow', 1)">&#8250;</button>
+            <button onclick="scrollRow('highestRatedRow', -1)">&#8249;</button>
+            <button onclick="scrollRow('highestRatedRow', 1)">&#8250;</button>
           </div>
         </div>
-        <div class="scroll-row-wrap"><div class="scroll-row" id="allSeriesRow"></div></div>
+        <div class="scroll-row-wrap"><div class="scroll-row" id="highestRatedRow"></div></div>
       </div>
     </div>
 
@@ -935,11 +934,16 @@
     // ---- Home Tab Rows ----
     function scrollCardSeries(s) {
       const thumb = thumbUrl(s.thumbnail_path);
+      const prog = getSeriesProgress(s.id);
+      const isRead = prog && prog.allRead;
+      const readOverlay = isRead ? '<div class="read-toggle" data-is-read="1" style="pointer-events:none;"></div>' : '';
+      const readClass = isRead ? ' is-read' : '';
       return `
-        <div class="scroll-card" style="position:relative;">
+        <div class="scroll-card${readClass}" style="position:relative;">
           <a href="/series.html?id=${s.id}" style="text-decoration:none;color:inherit;">
             <div style="position:relative;">
               ${thumb ? `<img class="sc-img" src="${thumb}" alt="${esc(s.name)}" loading="lazy">` : `<div class="sc-placeholder">&#128218;</div>`}
+              ${readOverlay}
               ${s.issue_count ? `<span class="card-badge">${s.issue_count}</span>` : ''}
             </div>
             <div class="sc-info">
@@ -964,33 +968,45 @@
         </a>`;
     }
 
-    function renderHomeRows() {
-      // All Series row
-      const allRow = document.getElementById('allSeriesRow');
-      const sorted = [...allSeries].sort((a, b) => a.name.localeCompare(b.name));
-      allRow.innerHTML = sorted.map(scrollCardSeries).join('');
-
-      // Recently Added (by created_at)
-      const recentAdded = [...allSeries].sort((a, b) => (b.created_at || '').localeCompare(a.created_at || '')).slice(0, 20);
-      if (recentAdded.length > 0) {
-        document.getElementById('recentAddedSection').style.display = 'block';
-        document.getElementById('recentAddedRow').innerHTML = recentAdded.map(scrollCardSeries).join('');
-      }
-
+    async function renderHomeRows() {
       // Recently Released (by latest cover_date from issues, descending)
-      const withDate = allSeries.filter(s => s.latest_cover_date);
-      const recentReleased = [...withDate].sort((a, b) => (b.latest_cover_date || '').localeCompare(a.latest_cover_date || '')).slice(0, 20);
+      var withDate = allSeries.filter(function(s) { return s.latest_cover_date; });
+      var recentReleased = withDate.slice().sort(function(a, b) { return (b.latest_cover_date || '').localeCompare(a.latest_cover_date || ''); }).slice(0, 20);
       if (recentReleased.length > 0) {
         document.getElementById('recentReleasedSection').style.display = 'block';
         document.getElementById('recentReleasedRow').innerHTML = recentReleased.map(scrollCardSeries).join('');
       }
 
+      // Recently Added (by created_at)
+      var recentAdded = allSeries.slice().sort(function(a, b) { return (b.created_at || '').localeCompare(a.created_at || ''); }).slice(0, 20);
+      if (recentAdded.length > 0) {
+        document.getElementById('recentAddedSection').style.display = 'block';
+        document.getElementById('recentAddedRow').innerHTML = recentAdded.map(scrollCardSeries).join('');
+      }
+
       // Trending — series with most issues (popular in library)
-      const trending = [...allSeries].sort((a, b) => b.issue_count - a.issue_count).slice(0, 20);
+      var trending = allSeries.slice().sort(function(a, b) { return b.issue_count - a.issue_count; }).slice(0, 20);
       if (trending.length > 0) {
         document.getElementById('trendingSection').style.display = 'block';
         document.getElementById('trendingRow').innerHTML = trending.map(scrollCardSeries).join('');
       }
+
+      // Highest Rated — fetch ratings and show top rated series
+      try {
+        var ratRes = await fetch('/api/ratings/me');
+        var myRatings = await ratRes.json();
+        if (myRatings.length > 0) {
+          var ratedIds = new Set(myRatings.map(function(r) { return r.series_id; }));
+          var ratingMap = {};
+          myRatings.forEach(function(r) { ratingMap[r.series_id] = r.rating; });
+          var rated = allSeries.filter(function(s) { return ratedIds.has(s.id); });
+          rated.sort(function(a, b) { return (ratingMap[b.id] || 0) - (ratingMap[a.id] || 0); });
+          if (rated.length > 0) {
+            document.getElementById('highestRatedSection').style.display = 'block';
+            document.getElementById('highestRatedRow').innerHTML = rated.slice(0, 20).map(scrollCardSeries).join('');
+          }
+        }
+      } catch(e) {}
     }
 
     async function loadContinueReading() {
@@ -1626,9 +1642,6 @@
       if (res.ok) {
         document.getElementById('editNameForm').style.display = 'none';
         document.getElementById('profileUsername').textContent = name;
-        // Update navbar too
-        var navName = document.getElementById('profileName');
-        if (navName) navName.textContent = name;
       }
     }
 
@@ -1726,7 +1739,6 @@
         } else {
           navAvatar.textContent = (user.displayName || user.username).charAt(0).toUpperCase();
         }
-        document.getElementById('profileName').textContent = user.displayName || user.username;
       }
     }).catch(() => {});
 
