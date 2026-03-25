@@ -3,6 +3,7 @@ const path = require('path');
 const { execSync } = require('child_process');
 const os = require('os');
 const JSZip = require('jszip');
+const yauzl = require('yauzl');
 
 // Image extensions to include when listing pages
 const IMAGE_EXTENSIONS = new Set(['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp']);
@@ -16,45 +17,76 @@ function naturalSort(a, b) {
 }
 
 /**
+ * Open a ZIP file with yauzl (streams from disk, supports files > 2GB).
+ */
+function openZip(filePath) {
+  return new Promise((resolve, reject) => {
+    yauzl.open(filePath, { lazyEntries: true }, (err, zipfile) => {
+      if (err) return reject(err);
+      resolve(zipfile);
+    });
+  });
+}
+
+/**
  * List page filenames inside a CBZ (zip) archive, sorted naturally.
+ * Uses yauzl to stream entries from disk (no 2GB limit).
  */
 async function listCbzPages(filePath) {
-  const data = fs.readFileSync(filePath);
-  const zip = await JSZip.loadAsync(data);
+  const zipfile = await openZip(filePath);
   const pages = [];
 
-  zip.forEach((relativePath, entry) => {
-    if (!entry.dir && isImage(relativePath)) {
-      pages.push(relativePath);
-    }
+  return new Promise((resolve, reject) => {
+    zipfile.on('entry', (entry) => {
+      if (!/\/$/.test(entry.fileName) && isImage(entry.fileName)) {
+        pages.push(entry.fileName);
+      }
+      zipfile.readEntry();
+    });
+    zipfile.on('end', () => {
+      pages.sort(naturalSort);
+      resolve(pages);
+    });
+    zipfile.on('error', reject);
+    zipfile.readEntry();
   });
-
-  pages.sort(naturalSort);
-  return pages;
 }
 
 /**
  * Extract a specific page from a CBZ archive as a Buffer.
+ * Uses yauzl to stream from disk (no 2GB limit).
  */
 async function extractCbzPage(filePath, pageIndex) {
-  const data = fs.readFileSync(filePath);
-  const zip = await JSZip.loadAsync(data);
-  const pages = [];
-
-  zip.forEach((relativePath, entry) => {
-    if (!entry.dir && isImage(relativePath)) {
-      pages.push(relativePath);
-    }
-  });
-
-  pages.sort(naturalSort);
+  const pages = await listCbzPages(filePath);
 
   if (pageIndex < 0 || pageIndex >= pages.length) {
     return null;
   }
 
-  const pageData = await zip.file(pages[pageIndex]).async('nodebuffer');
-  return { buffer: pageData, filename: path.basename(pages[pageIndex]) };
+  const targetFile = pages[pageIndex];
+  const zipfile = await openZip(filePath);
+
+  return new Promise((resolve, reject) => {
+    zipfile.on('entry', (entry) => {
+      if (entry.fileName === targetFile) {
+        zipfile.openReadStream(entry, (err, readStream) => {
+          if (err) return reject(err);
+          const chunks = [];
+          readStream.on('data', (chunk) => chunks.push(chunk));
+          readStream.on('end', () => {
+            zipfile.close();
+            resolve({ buffer: Buffer.concat(chunks), filename: path.basename(targetFile) });
+          });
+          readStream.on('error', reject);
+        });
+      } else {
+        zipfile.readEntry();
+      }
+    });
+    zipfile.on('end', () => resolve(null));
+    zipfile.on('error', reject);
+    zipfile.readEntry();
+  });
 }
 
 /**
