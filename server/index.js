@@ -32,6 +32,7 @@ app.use(attachUser);
 // Static assets (CSS, JS, images) — always public
 app.use('/css', express.static(path.join(publicDir, 'css')));
 app.use('/js', express.static(path.join(publicDir, 'js')));
+app.get('/favicon.svg', (req, res) => res.sendFile(path.join(publicDir, 'favicon.svg')));
 
 // Login page — always accessible
 app.get('/login.html', (req, res) => {
