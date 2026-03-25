@@ -33,6 +33,8 @@ app.use(attachUser);
 app.use('/css', express.static(path.join(publicDir, 'css')));
 app.use('/js', express.static(path.join(publicDir, 'js')));
 app.get('/favicon.svg', (req, res) => res.sendFile(path.join(publicDir, 'favicon.svg')));
+app.get('/favicon.png', (req, res) => res.sendFile(path.join(publicDir, 'favicon.png')));
+app.get('/favicon.ico', (req, res) => res.sendFile(path.join(publicDir, 'favicon.png')));
 
 // Login page — always accessible
 app.get('/login.html', (req, res) => {
