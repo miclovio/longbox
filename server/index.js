@@ -66,13 +66,12 @@ app.get('/{*splat}', (req, res) => {
   const db = getDb();
   const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
   if (userCount === 0) {
-    return res.sendFile(path.join(publicDir, 'login.html'));
+    return res.redirect('/login.html');
   }
 
   // Check auth
   if (!req.session || !req.session.userId) {
-    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
-    return res.sendFile(path.join(publicDir, 'login.html'));
+    return res.redirect('/login.html');
   }
 
   // Serve the requested file
