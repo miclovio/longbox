@@ -13,6 +13,9 @@ const publicDir = path.join(__dirname, '..', 'public');
 // Initialize database
 getDb();
 
+// Trust proxy (needed for secure cookies behind Cloudflare Tunnel)
+app.set('trust proxy', 1);
+
 // Middleware
 app.use(express.json());
 
@@ -24,6 +27,7 @@ app.use(session({
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     httpOnly: true,
     sameSite: 'lax',
+    secure: 'auto',
   },
 }));
 
@@ -67,6 +71,7 @@ app.get('/{*splat}', (req, res) => {
 
   // Check auth
   if (!req.session || !req.session.userId) {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate');
     return res.sendFile(path.join(publicDir, 'login.html'));
   }
 
