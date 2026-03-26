@@ -36,6 +36,7 @@ app.get('/favicon.svg', (req, res) => res.sendFile(path.join(publicDir, 'favicon
 app.get('/favicon.png', (req, res) => res.sendFile(path.join(publicDir, 'favicon.png')));
 app.get('/favicon.ico', (req, res) => res.sendFile(path.join(publicDir, 'favicon.png')));
 app.get('/apple-touch-icon.png', (req, res) => res.sendFile(path.join(publicDir, 'apple-touch-icon.png')));
+app.get('/apple-touch-icon-precomposed.png', (req, res) => res.sendFile(path.join(publicDir, 'apple-touch-icon.png')));
 
 // Login page — always accessible
 app.get('/login.html', (req, res) => {
@@ -61,12 +62,12 @@ app.get('/{*splat}', (req, res) => {
   const db = getDb();
   const userCount = db.prepare('SELECT COUNT(*) as c FROM users').get().c;
   if (userCount === 0) {
-    return res.redirect('/login.html');
+    return res.sendFile(path.join(publicDir, 'login.html'));
   }
 
   // Check auth
   if (!req.session || !req.session.userId) {
-    return res.redirect('/login.html');
+    return res.sendFile(path.join(publicDir, 'login.html'));
   }
 
   // Serve the requested file

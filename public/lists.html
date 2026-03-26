@@ -577,7 +577,7 @@
         if (user.isAdmin) document.getElementById('adminLink').style.display = '';
         document.getElementById('profileInitial').textContent = user.username.charAt(0).toUpperCase();
       } else {
-        window.location.href = '/login.html';
+        window.location.href = '/';
       }
     }).catch(() => {});
 
