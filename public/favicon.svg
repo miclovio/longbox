@@ -1,30 +1,34 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
-  <!-- Dark box body -->
-  <path d="M4 14 L4 26 Q4 28 6 28 L26 28 Q28 28 28 26 L28 14 Z" fill="#1a1a1a"/>
-  <!-- Gold rim -->
-  <rect x="3" y="13" width="26" height="3" rx="1" fill="#E5A00D"/>
-  <!-- Box handle -->
-  <rect x="13" y="24" width="6" height="1.5" rx="0.75" fill="#333"/>
+  <!-- Background -->
+  <rect width="32" height="32" rx="6" fill="#101010"/>
+  <g transform="translate(0 1.5)">
+    <!-- Dark box body -->
+    <path d="M4 14 L4 25 Q4 27 6 27 L26 27 Q28 27 28 25 L28 14 Z" fill="#1a1a1a"/>
+    <!-- Gold rim -->
+    <rect x="3" y="13" width="26" height="3" rx="1" fill="#E5A00D"/>
+    <!-- Box handle -->
+    <rect x="13" y="23" width="6" height="1.5" rx="0.75" fill="#333"/>
 
-  <!-- Comic 1 (back, tilted left) -->
-  <g transform="rotate(-12 12 12)">
-    <rect x="6" y="2" width="10" height="14" rx="1" fill="#282828" stroke="#E5A00D" stroke-width="0.6"/>
-    <rect x="7.5" y="3.5" width="7" height="4" rx="0.5" fill="#E5A00D" opacity="0.3"/>
-    <rect x="7.5" y="8.5" width="7" height="1" rx="0.5" fill="#E5A00D" opacity="0.2"/>
-    <rect x="7.5" y="10.5" width="5" height="1" rx="0.5" fill="#E5A00D" opacity="0.15"/>
-  </g>
+    <!-- Comic 1 (back, tilted left) -->
+    <g transform="rotate(-12 12 12)">
+      <rect x="6" y="2" width="10" height="13" rx="1" fill="#282828" stroke="#E5A00D" stroke-width="0.6"/>
+      <rect x="7.5" y="3.5" width="7" height="4" rx="0.5" fill="#E5A00D" opacity="0.3"/>
+      <rect x="7.5" y="8.5" width="7" height="1" rx="0.5" fill="#E5A00D" opacity="0.2"/>
+      <rect x="7.5" y="10.5" width="5" height="1" rx="0.5" fill="#E5A00D" opacity="0.15"/>
+    </g>
 
-  <!-- Comic 2 (middle) -->
-  <rect x="11" y="1" width="10" height="14" rx="1" fill="#E5A00D" stroke="#1a1a1a" stroke-width="0.8"/>
-  <rect x="12.5" y="2.5" width="7" height="5" rx="0.5" fill="#c4870a"/>
-  <rect x="12.5" y="8.5" width="7" height="1" rx="0.5" fill="#c4870a" opacity="0.7"/>
-  <rect x="12.5" y="10.5" width="5" height="1" rx="0.5" fill="#c4870a" opacity="0.5"/>
+    <!-- Comic 2 (middle) -->
+    <rect x="11" y="2" width="10" height="13" rx="1" fill="#E5A00D" stroke="#1a1a1a" stroke-width="0.8"/>
+    <rect x="12.5" y="3.5" width="7" height="4.5" rx="0.5" fill="#c4870a"/>
+    <rect x="12.5" y="9" width="7" height="1" rx="0.5" fill="#c4870a" opacity="0.7"/>
+    <rect x="12.5" y="11" width="5" height="1" rx="0.5" fill="#c4870a" opacity="0.5"/>
 
-  <!-- Comic 3 (front, tilted right) -->
-  <g transform="rotate(10 20 12)">
-    <rect x="16" y="3" width="10" height="14" rx="1" fill="#282828" stroke="#E5A00D" stroke-width="0.6"/>
-    <rect x="17.5" y="4.5" width="7" height="4.5" rx="0.5" fill="#E5A00D" opacity="0.4"/>
-    <rect x="17.5" y="10" width="7" height="1" rx="0.5" fill="#E5A00D" opacity="0.25"/>
-    <rect x="17.5" y="12" width="4" height="1" rx="0.5" fill="#E5A00D" opacity="0.15"/>
+    <!-- Comic 3 (front, tilted right) -->
+    <g transform="rotate(10 20 12)">
+      <rect x="16" y="3" width="10" height="13" rx="1" fill="#282828" stroke="#E5A00D" stroke-width="0.6"/>
+      <rect x="17.5" y="4.5" width="7" height="4.5" rx="0.5" fill="#E5A00D" opacity="0.4"/>
+      <rect x="17.5" y="10" width="7" height="1" rx="0.5" fill="#E5A00D" opacity="0.25"/>
+      <rect x="17.5" y="12" width="4" height="1" rx="0.5" fill="#E5A00D" opacity="0.15"/>
+    </g>
   </g>
 </svg>
