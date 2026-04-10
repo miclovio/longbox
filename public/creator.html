@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Creator — Longbox</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/png" href="/favicon.png">
@@ -98,173 +98,6 @@
       text-decoration: underline;
     }
 
-    /* ---- Horizontal Scroll Row (same as index.html) ---- */
-    .scroll-section {
-      margin-bottom: 2rem;
-    }
-
-    .scroll-section .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-    }
-
-    .scroll-section h3 {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .scroll-nav {
-      display: flex;
-      gap: 0.25rem;
-    }
-
-    .scroll-nav button {
-      width: 32px;
-      height: 32px;
-      border: none;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-secondary);
-      font-size: 1.1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s;
-    }
-
-    .scroll-nav button:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: white;
-    }
-
-    .scroll-nav button:disabled {
-      opacity: 0.2;
-      cursor: default;
-    }
-
-    .scroll-row-wrap {
-      position: relative;
-      overflow: hidden;
-    }
-
-    .scroll-row-wrap::before,
-    .scroll-row-wrap::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 40px;
-      z-index: 2;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    .scroll-row-wrap::before {
-      left: 0;
-      background: linear-gradient(to right, var(--bg-primary), transparent);
-    }
-
-    .scroll-row-wrap::after {
-      right: 0;
-      background: linear-gradient(to left, var(--bg-primary), transparent);
-    }
-
-    .scroll-row-wrap.can-scroll-left::before { opacity: 1; }
-    .scroll-row-wrap.can-scroll-right::after { opacity: 1; }
-
-    .scroll-row {
-      display: flex;
-      gap: 0.75rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
-      scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-
-    .scroll-row::-webkit-scrollbar { display: none; }
-
-    .scroll-card {
-      flex-shrink: 0;
-      width: 150px;
-      background: var(--bg-card);
-      border-radius: var(--radius);
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      text-decoration: none;
-      color: inherit;
-      display: block;
-    }
-
-    .scroll-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px var(--shadow);
-    }
-
-    .scroll-card .sc-img {
-      width: 100%;
-      aspect-ratio: 2 / 3;
-      object-fit: cover;
-      display: block;
-      background: var(--bg-secondary);
-    }
-
-    .scroll-card .sc-placeholder {
-      width: 100%;
-      aspect-ratio: 2 / 3;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      color: var(--text-muted);
-      background: var(--bg-secondary);
-    }
-
-    .scroll-card .sc-info {
-      padding: 0.5rem 0.6rem;
-    }
-
-    .scroll-card .sc-info h4 {
-      font-size: 0.78rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 0.1rem;
-    }
-
-    .scroll-card .sc-info .sc-meta {
-      font-size: 0.68rem;
-      color: var(--text-muted);
-    }
-
-    /* Dimmed card for volumes not in library */
-    .scroll-card.dimmed {
-      opacity: 0.5;
-      filter: grayscale(40%);
-    }
-
-    .scroll-card.dimmed:hover {
-      opacity: 0.75;
-      filter: grayscale(20%);
-    }
-
-    .scroll-card .sc-badge {
-      display: inline-block;
-      background: var(--accent);
-      color: #000;
-      font-size: 0.6rem;
-      font-weight: 700;
-      padding: 0.15rem 0.4rem;
-      border-radius: 3px;
-      text-transform: uppercase;
-    }
-
     /* Loading spinner */
     .loading {
       text-align: center;
@@ -305,6 +138,7 @@
       .creator-info h1 {
         font-size: 1.5rem;
       }
+
     }
 
     @media (max-width: 480px) {
@@ -316,7 +150,8 @@
 <body>
 
   <!-- Navbar -->
-  <header class="navbar">
+  <a href="#main-content" class="skip-link">Skip to content</a>
+  <header class="navbar" role="banner">
     <a class="logo" href="/" onclick="sessionStorage.setItem('active_tab','library');">Long<span>box</span></a>
     <nav>
       <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
@@ -324,7 +159,7 @@
     <div class="spacer"></div>
     <div class="search-container">
       <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input type="text" id="searchInput" placeholder="Search..." autocomplete="off">
+      <input type="text" id="searchInput" placeholder="Search..." autocomplete="off" aria-label="Search works">
     </div>
     <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
       <span id="profileInitial" style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:white;overflow:hidden;"></span>
@@ -333,7 +168,7 @@
   </header>
 
   <!-- Main -->
-  <div class="main">
+  <main class="main" id="main-content">
     <a href="/" onclick="sessionStorage.setItem('active_tab','library');" style="text-decoration:none;display:inline-block;margin-bottom:1rem;">
       <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Library</div>
       <div id="breadcrumbMeta" style="font-size:0.7rem;color:var(--text-muted);"></div>
@@ -360,10 +195,10 @@
     <!-- In Your Library -->
     <div class="scroll-section" id="librarySection" style="display:none;">
       <div class="section-header">
-        <h3>In Your Library</h3>
+        <h2 style="font-size:1.1rem;font-weight:600;">In Your Library</h2>
         <div class="scroll-nav">
-          <button onclick="scrollRow('libraryRow', -1)">&lsaquo;</button>
-          <button onclick="scrollRow('libraryRow', 1)">&rsaquo;</button>
+          <button onclick="scrollRow('libraryRow', -1)" aria-label="Scroll left">&lsaquo;</button>
+          <button onclick="scrollRow('libraryRow', 1)" aria-label="Scroll right">&rsaquo;</button>
         </div>
       </div>
       <div class="scroll-row-wrap"><div class="scroll-row" id="libraryRow"></div></div>
@@ -372,15 +207,15 @@
     <!-- Other Works -->
     <div class="scroll-section" id="otherWorksSection" style="display:none;">
       <div class="section-header">
-        <h3>Other Works</h3>
+        <h2 style="font-size:1.1rem;font-weight:600;">Other Works</h2>
         <div class="scroll-nav">
-          <button onclick="scrollRow('otherWorksRow', -1)">&lsaquo;</button>
-          <button onclick="scrollRow('otherWorksRow', 1)">&rsaquo;</button>
+          <button onclick="scrollRow('otherWorksRow', -1)" aria-label="Scroll left">&lsaquo;</button>
+          <button onclick="scrollRow('otherWorksRow', 1)" aria-label="Scroll right">&rsaquo;</button>
         </div>
       </div>
       <div class="scroll-row-wrap"><div class="scroll-row" id="otherWorksRow"></div></div>
     </div>
-  </div>
+  </main>
 
   <script src="/js/app.js"></script>
   <script>

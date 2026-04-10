@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Longbox</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/png" href="/favicon.png">
@@ -48,154 +48,8 @@
 
     /* ---- Tab Content ---- */
     .tab-content { display: none; }
-    .tab-content.active { display: block; }
-
-    /* ---- Horizontal Scroll Row ---- */
-    .scroll-section {
-      margin-bottom: 2rem;
-    }
-
-    .scroll-section .section-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 0.75rem;
-    }
-
-    .scroll-section h3 {
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .scroll-nav {
-      display: flex;
-      gap: 0.25rem;
-    }
-
-    .scroll-nav button {
-      width: 32px;
-      height: 32px;
-      border: none;
-      border-radius: 50%;
-      background: rgba(255, 255, 255, 0.08);
-      color: var(--text-secondary);
-      font-size: 1.1rem;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: all 0.15s;
-    }
-
-    .scroll-nav button:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: white;
-    }
-
-    .scroll-nav button:disabled {
-      opacity: 0.2;
-      cursor: default;
-    }
-
-    .scroll-row-wrap {
-      position: relative;
-      overflow: hidden;
-    }
-
-    /* Fade edges */
-    .scroll-row-wrap::before,
-    .scroll-row-wrap::after {
-      content: '';
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      width: 40px;
-      z-index: 2;
-      pointer-events: none;
-      opacity: 0;
-      transition: opacity 0.2s;
-    }
-
-    .scroll-row-wrap::before {
-      left: 0;
-      background: linear-gradient(to right, var(--bg-primary), transparent);
-    }
-
-    .scroll-row-wrap::after {
-      right: 0;
-      background: linear-gradient(to left, var(--bg-primary), transparent);
-    }
-
-    .scroll-row-wrap.can-scroll-left::before { opacity: 1; }
-    .scroll-row-wrap.can-scroll-right::after { opacity: 1; }
-
-    .scroll-row {
-      display: flex;
-      gap: 0.75rem;
-      overflow-x: auto;
-      padding-bottom: 0.5rem;
-      scroll-behavior: smooth;
-      overscroll-behavior-x: contain;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-
-    .scroll-row::-webkit-scrollbar { display: none; }
-
-    .scroll-card {
-      flex-shrink: 0;
-      width: 150px;
-      background: var(--bg-card);
-      border-radius: var(--radius);
-      overflow: hidden;
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      text-decoration: none;
-      color: inherit;
-      display: block;
-    }
-
-    .scroll-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 12px 32px var(--shadow);
-    }
-
-    .scroll-card .sc-img {
-      width: 100%;
-      aspect-ratio: 2 / 3;
-      object-fit: cover;
-      display: block;
-      background: var(--bg-secondary);
-    }
-
-    .scroll-card .sc-placeholder {
-      width: 100%;
-      aspect-ratio: 2 / 3;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 2rem;
-      color: var(--text-muted);
-      background: var(--bg-secondary);
-    }
-
-    .scroll-card .sc-info {
-      padding: 0.5rem 0.6rem;
-    }
-
-    .scroll-card .sc-info h4 {
-      font-size: 0.78rem;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      margin-bottom: 0.1rem;
-    }
-
-    .scroll-card .sc-info .sc-meta {
-      font-size: 0.68rem;
-      color: var(--text-muted);
-    }
+    .tab-content.active { display: block; animation: tabFadeIn var(--duration-normal, 250ms) var(--ease-out, cubic-bezier(0.25, 1, 0.5, 1)); }
+    @keyframes tabFadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 
     .sc-add-list {
       position: absolute;
@@ -224,7 +78,7 @@
     .sc-add-list:hover { background: var(--accent); color: white; }
 
     @media (max-width: 768px) {
-      .sc-add-list { opacity: 0; }
+      .sc-add-list { opacity: 0; width: 44px; height: 44px; font-size: 1.3rem; }
     }
 
     .scroll-card .sc-progress-bar {
@@ -563,8 +417,10 @@
 </head>
 <body>
 
+  <a href="#main-content" class="skip-link">Skip to content</a>
+
   <!-- Navbar -->
-  <header class="navbar">
+  <header class="navbar" role="banner">
     <a class="logo" href="/" onclick="sessionStorage.setItem('active_tab','home');">Long<span>box</span></a>
     <nav>
       <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
@@ -572,7 +428,7 @@
     <div class="spacer"></div>
     <div class="search-container">
       <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input type="text" id="searchInput" placeholder="Search series..." autocomplete="off">
+      <input type="text" id="searchInput" placeholder="Search series..." autocomplete="off" aria-label="Search series">
     </div>
     <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
       <span id="profileInitial" style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:white;overflow:hidden;"></span>
@@ -580,7 +436,7 @@
   </header>
 
   <!-- Main -->
-  <div class="main">
+  <main class="main" id="main-content">
     <!-- Tabs -->
     <div class="page-tabs">
       <button class="page-tab active" data-tab="home">Home</button>
@@ -592,13 +448,42 @@
 
     <!-- Home Tab -->
     <div class="tab-content active" id="tab-home">
+      <h2 class="sr-only" style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);border:0;">Home</h2>
+      <!-- Welcome banner for new users (dismissed to localStorage) -->
+      <div id="welcomeBanner" style="display:none;background:var(--bg-secondary);border-radius:var(--radius);padding:1rem 1.25rem;margin-bottom:1.5rem;display:none;align-items:flex-start;gap:1rem;">
+        <div style="flex:1;">
+          <strong style="color:var(--text-primary);font-size:0.9rem;">Welcome to Longbox</strong>
+          <p style="color:var(--text-secondary);font-size:0.82rem;margin-top:0.25rem;">Browse the library, click any issue to start reading, and use the <span style="display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;background:var(--accent);color:white;border-radius:4px;font-size:0.75rem;font-weight:700;">+</span> button on comics cover to build reading lists.</p>
+        </div>
+        <button onclick="dismissWelcome()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:1.2rem;padding:0.2rem;line-height:1;flex-shrink:0;" aria-label="Dismiss">&times;</button>
+      </div>
+      <!-- Getting Started (shown when library is empty) -->
+      <div id="onboardingCard" style="display:none;max-width:500px;margin:4rem auto;text-align:center;">
+        <h2 style="font-size:1.4rem;margin-bottom:0.5rem;color:var(--text-primary);">Welcome to Longbox</h2>
+        <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:2rem;">Get your library set up in a few steps.</p>
+        <div style="text-align:left;display:flex;flex-direction:column;gap:1rem;">
+          <div style="display:flex;align-items:flex-start;gap:1rem;">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">1</span>
+            <div><strong style="color:var(--text-primary);font-size:0.9rem;">Add a comics folder</strong><br><span style="font-size:0.82rem;color:var(--text-muted);">Point Longbox to where your CBR/CBZ files live.</span></div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:1rem;">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">2</span>
+            <div><strong style="color:var(--text-primary);font-size:0.9rem;">Scan your library</strong><br><span style="font-size:0.82rem;color:var(--text-muted);">Longbox will find series, generate covers, and organize everything.</span></div>
+          </div>
+          <div style="display:flex;align-items:flex-start;gap:1rem;">
+            <span style="width:28px;height:28px;border-radius:50%;background:var(--accent);color:white;display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;flex-shrink:0;">3</span>
+            <div><strong style="color:var(--text-primary);font-size:0.9rem;">Start reading</strong><br><span style="font-size:0.82rem;color:var(--text-muted);">Click any issue to open the full-screen reader.</span></div>
+          </div>
+        </div>
+        <a href="/admin.html" class="btn btn-primary" style="margin-top:2rem;display:inline-flex;">Go to Admin</a>
+      </div>
       <!-- Continue Reading -->
       <div class="scroll-section" id="continueSection" style="display:none;">
         <div class="section-header">
           <h3>Continue Reading</h3>
           <div class="scroll-nav">
-            <button onclick="scrollRow('continueRow', -1)">&#8249;</button>
-            <button onclick="scrollRow('continueRow', 1)">&#8250;</button>
+            <button onclick="scrollRow('continueRow', -1)" aria-label="Scroll left">&#8249;</button>
+            <button onclick="scrollRow('continueRow', 1)" aria-label="Scroll right">&#8250;</button>
           </div>
         </div>
         <div class="scroll-row-wrap"><div class="scroll-row" id="continueRow"></div></div>
@@ -609,8 +494,8 @@
         <div class="section-header">
           <h3>Recently Released</h3>
           <div class="scroll-nav">
-            <button onclick="scrollRow('recentReleasedRow', -1)">&#8249;</button>
-            <button onclick="scrollRow('recentReleasedRow', 1)">&#8250;</button>
+            <button onclick="scrollRow('recentReleasedRow', -1)" aria-label="Scroll left">&#8249;</button>
+            <button onclick="scrollRow('recentReleasedRow', 1)" aria-label="Scroll right">&#8250;</button>
           </div>
         </div>
         <div class="scroll-row-wrap"><div class="scroll-row" id="recentReleasedRow"></div></div>
@@ -621,8 +506,8 @@
         <div class="section-header">
           <h3>Recently Added</h3>
           <div class="scroll-nav">
-            <button onclick="scrollRow('recentAddedRow', -1)">&#8249;</button>
-            <button onclick="scrollRow('recentAddedRow', 1)">&#8250;</button>
+            <button onclick="scrollRow('recentAddedRow', -1)" aria-label="Scroll left">&#8249;</button>
+            <button onclick="scrollRow('recentAddedRow', 1)" aria-label="Scroll right">&#8250;</button>
           </div>
         </div>
         <div class="scroll-row-wrap"><div class="scroll-row" id="recentAddedRow"></div></div>
@@ -631,10 +516,10 @@
       <!-- Trending -->
       <div class="scroll-section" id="trendingSection" style="display:none;">
         <div class="section-header">
-          <h3>Trending in Your Library</h3>
+          <h3>Trending In The Library</h3>
           <div class="scroll-nav">
-            <button onclick="scrollRow('trendingRow', -1)">&#8249;</button>
-            <button onclick="scrollRow('trendingRow', 1)">&#8250;</button>
+            <button onclick="scrollRow('trendingRow', -1)" aria-label="Scroll left">&#8249;</button>
+            <button onclick="scrollRow('trendingRow', 1)" aria-label="Scroll right">&#8250;</button>
           </div>
         </div>
         <div class="scroll-row-wrap"><div class="scroll-row" id="trendingRow"></div></div>
@@ -645,8 +530,8 @@
         <div class="section-header">
           <h3>Highest Rated</h3>
           <div class="scroll-nav">
-            <button onclick="scrollRow('highestRatedRow', -1)">&#8249;</button>
-            <button onclick="scrollRow('highestRatedRow', 1)">&#8250;</button>
+            <button onclick="scrollRow('highestRatedRow', -1)" aria-label="Scroll left">&#8249;</button>
+            <button onclick="scrollRow('highestRatedRow', 1)" aria-label="Scroll right">&#8250;</button>
           </div>
         </div>
         <div class="scroll-row-wrap"><div class="scroll-row" id="highestRatedRow"></div></div>
@@ -665,7 +550,7 @@
         <h2 id="pageTitle">Library</h2>
         <div class="size-slider">
           <span class="slider-icon">&#9638;</span>
-          <input type="range" id="gridSizeSlider" min="150" max="300" value="180" step="10">
+          <input type="range" id="gridSizeSlider" min="150" max="300" value="180" step="10" aria-label="Grid card size">
           <span class="slider-icon lg">&#9638;</span>
         </div>
         <select id="sortSelect">
@@ -678,7 +563,7 @@
         </select>
         <div class="search-container search-inline">
           <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-          <input type="text" id="searchInputInline" placeholder="Search..." autocomplete="off">
+          <input type="text" id="searchInputInline" placeholder="Search..." autocomplete="off" aria-label="Search library">
         </div>
       </div>
       <div class="grid" id="grid"></div>
@@ -707,9 +592,9 @@
         </div>
         <div id="newListForm" style="display:none;margin:0.75rem 0;">
           <div style="display:flex;gap:0.5rem;align-items:center;max-width:400px;">
-            <input type="text" id="newListInput" placeholder="List name" style="flex:1;padding:0.5rem 0.75rem;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#fff;font-size:0.9rem;">
+            <input type="text" id="newListInput" placeholder="List name" aria-label="New list name" style="flex:1;padding:0.5rem 0.75rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:0.9rem;">
             <button class="btn btn-primary" onclick="submitNewList()">Create</button>
-            <button class="btn" onclick="document.getElementById('newListForm').style.display='none';" style="border-color:#555;color:#aaa;">Cancel</button>
+            <button class="btn" onclick="document.getElementById('newListForm').style.display='none';" style="border-color:var(--text-disabled);color:var(--text-secondary);">Cancel</button>
           </div>
         </div>
         <div class="grid" id="listsGrid"></div>
@@ -725,14 +610,14 @@
           <h2 id="listDetailName" style="font-size:1.1rem;"></h2>
           <div id="renameListForm" style="display:none;">
             <div style="display:flex;gap:0.5rem;align-items:center;">
-              <input type="text" id="renameListInput" placeholder="New name" style="padding:0.4rem 0.6rem;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#fff;font-size:0.85rem;">
+              <input type="text" id="renameListInput" placeholder="New name" aria-label="Rename list" style="padding:0.4rem 0.6rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:0.85rem;">
               <button class="btn btn-primary" style="padding:0.4rem 0.75rem;font-size:0.8rem;" onclick="submitRenameList()">Save</button>
-              <button class="btn" style="padding:0.4rem 0.75rem;font-size:0.8rem;border-color:#555;color:#aaa;" onclick="document.getElementById('renameListForm').style.display='none';">Cancel</button>
+              <button class="btn" style="padding:0.4rem 0.75rem;font-size:0.8rem;border-color:var(--text-disabled);color:var(--text-secondary);" onclick="document.getElementById('renameListForm').style.display='none';">Cancel</button>
             </div>
           </div>
           <div class="list-detail-actions">
             <button class="btn btn-secondary" onclick="renameCurrentList()">Rename</button>
-            <button class="btn btn-secondary" style="color:#e74c3c;" onclick="deleteCurrentList()">Delete</button>
+            <button class="btn btn-secondary" style="color:var(--color-danger);" onclick="deleteCurrentList(event)">Delete</button>
           </div>
         </div>
         <div class="grid" id="listDetailGrid"></div>
@@ -777,7 +662,7 @@
       <!-- Edit Name Inline -->
       <div id="editNameForm" style="display:none;background:var(--bg-secondary);border-radius:var(--radius);padding:1rem;margin-bottom:1rem;">
         <div style="display:flex;gap:0.5rem;align-items:center;">
-          <input type="text" id="editNameInput" placeholder="Display name" style="flex:1;padding:0.5rem 0.75rem;background:#1a1a1a;border:1px solid #333;border-radius:6px;color:#fff;font-size:0.9rem;">
+          <input type="text" id="editNameInput" placeholder="Display name" aria-label="Display name" style="flex:1;padding:0.5rem 0.75rem;background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;color:var(--text-primary);font-size:0.9rem;">
           <button class="btn btn-primary" onclick="saveDisplayName()">Save</button>
           <button class="btn btn-secondary" onclick="document.getElementById('editNameForm').style.display='none';">Cancel</button>
         </div>
@@ -837,10 +722,15 @@
       <div id="profileReadEmpty" style="display:none;color:var(--text-muted);font-size:0.85rem;">No completed issues yet.</div>
       <div style="display:none;" id="profileRead"></div>
     </div>
-  </div>
+  </main>
 
   <script src="/js/app.js"></script>
   <script>
+    function dismissWelcome() {
+      localStorage.setItem('longbox_welcome_dismissed', '1');
+      document.getElementById('welcomeBanner').style.display = 'none';
+    }
+
     // Scroll row by direction (-1 left, 1 right), scroll by ~3 cards
     function scrollRow(id, dir) {
       const row = document.getElementById(id);
@@ -869,6 +759,7 @@
     }
 
     let allSeries = [];
+    let currentUserIsAdmin = false;
 
     async function loadSeries() {
       const res = await fetch('/api/series');
@@ -969,6 +860,25 @@
     }
 
     async function renderHomeRows() {
+      // Show onboarding if library is empty (admin) or welcome (non-admin)
+      var onboarding = document.getElementById('onboardingCard');
+      if (allSeries.length === 0) {
+        if (currentUserIsAdmin) {
+          onboarding.style.display = 'block';
+        } else {
+          onboarding.innerHTML = '<div style="text-align:center;padding:4rem 2rem;"><h2 style="font-size:1.4rem;margin-bottom:0.5rem;color:var(--text-primary);">Nothing here yet</h2><p style="color:var(--text-secondary);font-size:0.9rem;">Your admin hasn\'t added any comics to the library yet. Check back soon!</p></div>';
+          onboarding.style.display = 'block';
+        }
+        return;
+      }
+      onboarding.style.display = 'none';
+
+      // Show welcome banner for new users who haven't dismissed it
+      if (!localStorage.getItem('longbox_welcome_dismissed')) {
+        var banner = document.getElementById('welcomeBanner');
+        banner.style.display = 'flex';
+      }
+
       // Recently Released (by latest cover_date from issues, descending)
       var withDate = allSeries.filter(function(s) { return s.latest_cover_date; });
       var recentReleased = withDate.slice().sort(function(a, b) { return (b.latest_cover_date || '').localeCompare(a.latest_cover_date || ''); }).slice(0, 20);
@@ -1209,7 +1119,7 @@
             <div class="card-info">
               <div class="card-info-row">
                 <h3 title="${esc(item.title)}">${esc(item.title)}</h3>
-                <button class="mark-read-btn" onclick="removeFromList(${listId}, ${item.issue_id})" title="Remove" style="background:#e74c3c;border:none;color:white;width:18px;height:18px;border-radius:50%;font-size:0.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&times;</button>
+                <button class="mark-read-btn" onclick="removeFromList(${listId}, ${item.issue_id})" title="Remove" style="background:var(--color-danger);border:none;color:white;width:18px;height:18px;border-radius:50%;font-size:0.6rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;">&times;</button>
               </div>
               <span class="meta">${esc(item.series_name || '')}</span>
             </div>
@@ -1256,7 +1166,8 @@
     async function deleteCurrentList() {
       if (!currentListId) return;
       // Replace confirm() with inline confirmation
-      const btn = document.querySelector('.list-detail-actions button[style*="e74c3c"]');
+      const btn = event ? event.target : document.querySelector('.list-detail-actions .btn-secondary[style*="color-danger"]');
+      if (!btn) return;
       if (btn.dataset.confirming) {
         await fetch(`/api/lists/${currentListId}`, { method: 'DELETE' });
         showListsOverview();
@@ -1264,7 +1175,9 @@
       }
       btn.dataset.confirming = 'true';
       btn.textContent = 'Confirm Delete';
-      setTimeout(() => { btn.textContent = 'Delete'; delete btn.dataset.confirming; }, 3000);
+      btn.style.background = 'var(--color-danger)';
+      btn.style.color = 'white';
+      setTimeout(() => { btn.textContent = 'Delete'; btn.style.background = ''; btn.style.color = 'var(--color-danger)'; delete btn.dataset.confirming; }, 3000);
     }
 
     async function removeFromList(listId, issueId) {
@@ -1364,7 +1277,7 @@
       var coverHtml = coverThumb
         ? '<div class="activity-cover-wrap" onclick="window.location.href=\'/series.html?id=' + item.series_id + '\'">'
           + '<div class="activity-cover-bg" style="background-image:url(/api/thumbnails/' + esc(coverThumb) + ');"></div>'
-          + '<img class="activity-cover" src="/api/thumbnails/' + esc(coverThumb) + '">'
+          + '<img class="activity-cover" src="/api/thumbnails/' + esc(coverThumb) + '" loading="lazy">'
           + '</div>'
         : '';
 
@@ -1566,7 +1479,7 @@
             ratRow.innerHTML = myRatings.map(function(r) {
               var thumb = r.thumbnail_path ? '/api/thumbnails/' + r.thumbnail_path : '';
               var stars = '';
-              for (var i = 1; i <= 5; i++) stars += i <= r.rating ? '<span style="color:var(--accent);">&#9733;</span>' : '<span style="color:#555;">&#9733;</span>';
+              for (var i = 1; i <= 5; i++) stars += i <= r.rating ? '<span style="color:var(--accent);">&#9733;</span>' : '<span style="color:var(--text-disabled);">&#9733;</span>';
               return '<a href="/series.html?id=' + r.series_id + '" style="text-decoration:none;color:inherit;display:inline-flex;width:260px;flex-shrink:0;background:var(--bg-secondary);border-radius:var(--radius);overflow:hidden;">'
                 + '<div style="flex-shrink:0;width:90px;">'
                 + (thumb ? '<img src="' + esc(thumb) + '" alt="' + esc(r.series_name) + '" loading="lazy" style="width:100%;height:100%;object-fit:cover;display:block;">' : '<div style="width:100%;height:100%;background:var(--bg-card);display:flex;align-items:center;justify-content:center;font-size:1.5rem;color:var(--text-muted);">&#128218;</div>')
@@ -1730,6 +1643,7 @@
     // Load current user for navbar
     fetch('/api/auth/me').then(r => r.json()).then(user => {
       if (user.authenticated) {
+        currentUserIsAdmin = user.isAdmin;
         if (user.isAdmin) document.getElementById('adminLink').style.display = '';
         var navAvatar = document.getElementById('profileInitial');
         if (user.avatarPath) {

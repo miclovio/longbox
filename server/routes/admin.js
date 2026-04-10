@@ -46,13 +46,6 @@ router.get('/scan/status', (req, res) => {
   });
 });
 
-// POST /api/admin/shutdown — gracefully stop the server
-router.post('/shutdown', (req, res) => {
-  res.json({ message: 'Server shutting down...' });
-  console.log('Shutdown requested from admin panel');
-  setTimeout(() => process.exit(0), 500);
-});
-
 // GET /api/admin/users — list all users
 router.get('/users', (req, res) => {
   const db = getDb();

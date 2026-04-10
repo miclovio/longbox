@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Reading Lists — Longbox</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/png" href="/favicon.png">
@@ -77,7 +77,7 @@
     }
 
     .list-card .list-actions button.delete-btn:hover {
-      color: #e74c3c;
+      color: var(--color-danger);
       background: rgba(231, 76, 60, 0.15);
     }
 
@@ -199,7 +199,7 @@
     .card:hover .remove-item-btn { opacity: 1; }
 
     .remove-item-btn:hover {
-      background: #e74c3c;
+      background: var(--color-danger);
       color: white;
     }
 
@@ -252,7 +252,8 @@
 </head>
 <body>
 
-  <header class="navbar">
+  <a href="#main-content" class="skip-link">Skip to content</a>
+  <header class="navbar" role="banner">
     <a class="logo" href="/">Long<span>box</span></a>
     <nav>
       <a href="/">Library</a>
@@ -266,7 +267,7 @@
     </a>
   </header>
 
-  <div class="main">
+  <main class="main" id="main-content">
     <!-- All Lists View -->
     <div id="allListsView">
       <div class="toolbar">
@@ -284,7 +285,7 @@
         <h2 id="detailName"></h2>
         <div class="detail-actions">
           <button class="btn btn-secondary" id="renameListBtn">Rename</button>
-          <button class="btn btn-secondary" id="deleteListBtn" style="color:#e74c3c;">Delete</button>
+          <button class="btn btn-secondary" id="deleteListBtn" style="color:var(--color-danger);">Delete</button>
         </div>
       </div>
       <div class="grid detail-grid" id="detailGrid"></div>
@@ -293,13 +294,13 @@
         <p>Add issues from any series page using the + button on each issue card.</p>
       </div>
     </div>
-  </div>
+  </main>
 
   <!-- Rename Dialog -->
-  <div class="rename-overlay" id="renameOverlay">
+  <div class="rename-overlay" id="renameOverlay" role="dialog" aria-modal="true" aria-label="Rename list">
     <div class="rename-dialog">
       <h3>Rename List</h3>
-      <input type="text" id="renameInput" placeholder="List name...">
+      <input type="text" id="renameInput" placeholder="List name..." aria-label="List name">
       <div class="dialog-btns">
         <button class="btn btn-secondary" id="renameCancelBtn">Cancel</button>
         <button class="btn btn-primary" id="renameSaveBtn">Save</button>
@@ -338,7 +339,7 @@
         <div class="list-card" data-id="${l.id}" onclick="openList(${l.id})">
           <div class="list-actions">
             <button title="Rename" onclick="event.stopPropagation(); promptRename(${l.id}, '${esc(l.name).replace(/'/g, "\\'")}')">&#9998;</button>
-            <button class="delete-btn" title="Delete" onclick="event.stopPropagation(); deleteList(${l.id}, '${esc(l.name).replace(/'/g, "\\'")}')">&#10005;</button>
+            <button class="delete-btn" title="Delete" onclick="event.stopPropagation(); deleteList(${l.id}, '${esc(l.name).replace(/'/g, "\\'")}', this)">&#10005;</button>
           </div>
           <h3>${esc(l.name)}</h3>
           <span class="list-meta">${l.item_count} issue${l.item_count !== 1 ? 's' : ''}</span>
@@ -348,7 +349,7 @@
       grid.innerHTML = cards + `
         <div class="create-card" id="createCard" onclick="showCreateInput()">+ New List</div>
         <div class="create-input-wrap" id="createWrap">
-          <input type="text" id="createInput" placeholder="List name..." maxlength="100">
+          <input type="text" id="createInput" placeholder="List name..." aria-label="New list name" maxlength="100">
           <div class="create-hint">Press Enter to create, Escape to cancel</div>
         </div>
       `;
@@ -513,19 +514,27 @@
       document.getElementById('renameOverlay').classList.add('visible');
       document.getElementById('renameInput').focus();
       document.getElementById('renameInput').select();
+      window._renameTrap = trapFocus(document.querySelector('.rename-dialog'));
     }
 
     document.getElementById('renameCancelBtn').addEventListener('click', () => {
       document.getElementById('renameOverlay').classList.remove('visible');
+      if (window._renameTrap) { window._renameTrap(); window._renameTrap = null; }
     });
 
     document.getElementById('renameOverlay').addEventListener('click', (e) => {
-      if (e.target === e.currentTarget) document.getElementById('renameOverlay').classList.remove('visible');
+      if (e.target === e.currentTarget) {
+        document.getElementById('renameOverlay').classList.remove('visible');
+        if (window._renameTrap) { window._renameTrap(); window._renameTrap = null; }
+      }
     });
 
     document.getElementById('renameInput').addEventListener('keydown', (e) => {
       if (e.key === 'Enter') document.getElementById('renameSaveBtn').click();
-      if (e.key === 'Escape') document.getElementById('renameOverlay').classList.remove('visible');
+      if (e.key === 'Escape') {
+        document.getElementById('renameOverlay').classList.remove('visible');
+        if (window._renameTrap) { window._renameTrap(); window._renameTrap = null; }
+      }
     });
 
     document.getElementById('renameSaveBtn').addEventListener('click', async () => {
@@ -539,6 +548,7 @@
       });
 
       document.getElementById('renameOverlay').classList.remove('visible');
+      if (window._renameTrap) { window._renameTrap(); window._renameTrap = null; }
 
       // If in detail view, update title
       if (document.getElementById('detailView').style.display !== 'none') {
@@ -554,21 +564,36 @@
     });
 
     // ---- Delete ----
-    async function deleteList(id, name) {
-      if (!confirm(`Delete list "${name}"? This cannot be undone.`)) return;
-      await fetch(`/api/lists/${id}`, { method: 'DELETE' });
-      loadLists();
+    async function deleteList(id, name, btn) {
+      if (!btn) return;
+      if (btn.dataset.confirming) {
+        await fetch(`/api/lists/${id}`, { method: 'DELETE' });
+        loadLists();
+        return;
+      }
+      btn.dataset.confirming = 'true';
+      btn.style.background = 'var(--color-danger)';
+      btn.style.color = 'white';
+      btn.title = 'Click again to confirm';
+      setTimeout(() => { btn.style.background = ''; btn.style.color = ''; btn.title = 'Delete'; delete btn.dataset.confirming; }, 3000);
     }
 
-    document.getElementById('deleteListBtn').addEventListener('click', () => {
-      const name = document.getElementById('detailName').textContent;
-      if (!confirm(`Delete list "${name}"? This cannot be undone.`)) return;
-      fetch(`/api/lists/${currentListId}`, { method: 'DELETE' }).then(() => {
-        document.getElementById('detailView').style.display = 'none';
-        document.getElementById('allListsView').style.display = 'block';
-        currentListId = null;
-        loadLists();
-      });
+    document.getElementById('deleteListBtn').addEventListener('click', function() {
+      var btn = this;
+      if (btn.dataset.confirming) {
+        fetch(`/api/lists/${currentListId}`, { method: 'DELETE' }).then(() => {
+          document.getElementById('detailView').style.display = 'none';
+          document.getElementById('allListsView').style.display = 'block';
+          currentListId = null;
+          loadLists();
+        });
+        return;
+      }
+      btn.dataset.confirming = 'true';
+      btn.textContent = 'Confirm Delete';
+      btn.style.background = 'var(--color-danger)';
+      btn.style.color = 'white';
+      setTimeout(() => { btn.textContent = 'Delete'; btn.style.background = ''; btn.style.color = 'var(--color-danger)'; delete btn.dataset.confirming; }, 3000);
     });
 
     // ---- Navbar user ----

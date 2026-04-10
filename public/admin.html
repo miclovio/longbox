@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Admin — Longbox</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/png" href="/favicon.png">
@@ -38,9 +38,9 @@
     .config-row:last-child { border: none; }
     .config-row .label { color: var(--text-muted); }
     .config-row .value { color: var(--text-primary); text-align: right; }
-    .config-row .value.ok { color: #27ae60; }
+    .config-row .value.ok { color: var(--color-success); }
     .config-row .value.warn { color: var(--accent); }
-    .config-row .value.err { color: #e74c3c; }
+    .config-row .value.err { color: var(--color-danger); }
 
     .user-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
     .user-table th, .user-table td {
@@ -76,8 +76,8 @@
       font-size: 0.75rem;
       transition: all 0.15s;
     }
-    .btn-sm.delete { border-color: #e74c3c; color: #e74c3c; }
-    .btn-sm.delete:hover { background: #e74c3c; color: white; }
+    .btn-sm.delete { border-color: var(--color-danger); color: var(--color-danger); }
+    .btn-sm.delete:hover { background: var(--color-danger); color: white; }
 
     .log {
       background: var(--bg-input);
@@ -146,7 +146,9 @@
 </head>
 <body>
 
-  <header class="navbar">
+  <a href="#main-content" class="skip-link">Skip to content</a>
+
+  <header class="navbar" role="banner">
     <a class="logo" href="/">Long<span>box</span></a>
     <nav>
       <a href="/admin.html" class="active">Admin</a>
@@ -158,11 +160,10 @@
     </a>
   </header>
 
-  <div class="main">
+  <main class="main" id="main-content">
     <div class="toolbar">
       <h2>Admin Dashboard</h2>
       <button class="btn btn-primary" id="scanBtn" onclick="triggerScan()">Scan Library</button>
-      <button class="btn btn-primary" style="background:#cc3333;" onclick="shutdownServer()">Kill Server</button>
     </div>
     <div class="log" id="scanLog" style="display:none;margin-bottom:1.25rem;"></div>
 
@@ -182,7 +183,7 @@
         <h3>Comics Folders</h3>
         <div id="pathsList">Loading...</div>
         <div class="create-user-form" style="margin-top:0.75rem;">
-          <input type="text" id="newPathInput" placeholder="Add folder path..." style="flex:2;">
+          <input type="text" id="newPathInput" placeholder="Add folder path..." style="flex:2;" aria-label="Comics folder path">
           <button class="btn btn-primary" onclick="addPath()">Add</button>
         </div>
       </div>
@@ -203,8 +204,8 @@
         <h3>User Management</h3>
         <div id="usersContainer">Loading...</div>
         <div class="create-user-form">
-          <input type="text" id="newUsername" placeholder="Username" autocomplete="off">
-          <input type="password" id="newPassword" placeholder="Password" autocomplete="new-password">
+          <input type="text" id="newUsername" placeholder="Username" autocomplete="off" aria-label="New username">
+          <input type="password" id="newPassword" placeholder="Password" autocomplete="new-password" aria-label="New password">
           <label style="display:inline-flex;align-items:center;gap:0.3rem;font-size:0.8rem;color:var(--text-secondary);cursor:pointer;">
             <input type="checkbox" id="newIsAdmin" style="accent-color:var(--accent);"> Admin
           </label>
@@ -219,10 +220,10 @@
         <h3 style="margin:0;">Unmatched Series <span id="unmatchedCount" style="color:var(--text-muted);font-weight:400;font-size:0.85rem;"></span></h3>
         <button id="matchAllBtn" class="btn-sm" style="border-color:var(--accent);color:var(--accent);display:none;" onclick="matchAll()">Match All</button>
       </div>
-      <div id="matchAllLog" style="display:none;background:#181818;border-radius:6px;padding:0.75rem;margin-top:0.75rem;max-height:200px;overflow-y:auto;font-size:0.78rem;font-family:monospace;white-space:pre-wrap;color:var(--text-muted);"></div>
+      <div id="matchAllLog" style="display:none;background:var(--bg-inset);border-radius:6px;padding:0.75rem;margin-top:0.75rem;max-height:200px;overflow-y:auto;font-size:0.78rem;font-family:monospace;white-space:pre-wrap;color:var(--text-muted);"></div>
       <div id="unmatchedList">Loading...</div>
     </div>
-  </div>
+  </main>
 
   <script>
     function formatBytes(bytes) {
@@ -259,7 +260,7 @@
       document.getElementById('unmatchedCount').textContent = `(${list.length})`;
 
       if (list.length === 0) {
-        el.innerHTML = '<p style="color:#27ae60;font-size:0.82rem;">All series matched!</p>';
+        el.innerHTML = '<p style="color:var(--color-success);font-size:0.82rem;">All series matched!</p>';
         document.getElementById('matchAllBtn').style.display = 'none';
         return;
       }
@@ -344,6 +345,15 @@
                 log.textContent += `Errors: ${r.errors.length}\n`;
                 r.errors.slice(0, 10).forEach(e => log.textContent += `  - ${e.error}\n`);
               }
+              // Summary toast
+              var parts = [];
+              if (r.seriesAdded > 0) parts.push(r.seriesAdded + ' series');
+              if (r.issuesAdded > 0) parts.push(r.issuesAdded + ' issues');
+              if (parts.length > 0) {
+                showToast('Found ' + parts.join(' and ') + '.', { type: 'success', duration: 4000 });
+              } else {
+                showToast('Library is up to date.', { type: 'success' });
+              }
             } else if (data.lastResult?.error) {
               log.textContent += `Error: ${data.lastResult.error}\n`;
             }
@@ -361,11 +371,6 @@
       }
     }
 
-    async function shutdownServer() {
-      if (!confirm('Kill the server?')) return;
-      try { await fetch('/api/admin/shutdown', { method: 'POST' }); } catch {}
-      document.body.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100vh;color:var(--accent);font-size:1.5rem;">Server stopped.</div>';
-    }
 
     async function loadUsers() {
       const container = document.getElementById('usersContainer');
@@ -384,12 +389,12 @@
                 <td>${u.username}</td>
                 <td><span class="role-badge ${u.isAdmin ? 'admin' : 'member'}" onclick="toggleAdmin(${u.id})" title="Click to toggle">${u.isAdmin ? 'Admin' : 'Member'}</span></td>
                 <td style="color:var(--text-muted);">${new Date(u.createdAt).toLocaleDateString()}</td>
-                <td>${u.isAdmin ? '' : `<button class="btn-sm delete" onclick="deleteUser(${u.id}, '${u.username}')">Delete</button>`}</td>
+                <td>${u.isAdmin ? '' : `<button class="btn-sm delete" onclick="deleteUser(${u.id}, '${u.username}', this)">Delete</button>`}</td>
               </tr>`).join('')}
             </tbody>
           </table>`;
       } catch (err) {
-        container.innerHTML = `<p style="color:#e74c3c;">Failed to load users</p>`;
+        container.innerHTML = `<p style="color:var(--color-danger);">Failed to load users</p>`;
       }
     }
 
@@ -398,11 +403,19 @@
       loadUsers();
     }
 
-    async function deleteUser(id, username) {
-      if (!confirm(`Delete user "${username}"? Their reading progress will be removed.`)) return;
-      const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
-      if (res.ok) loadUsers();
-      else alert((await res.json()).error);
+    async function deleteUser(id, username, btn) {
+      if (!btn) return;
+      if (btn.dataset.confirming) {
+        const res = await fetch(`/api/admin/users/${id}`, { method: 'DELETE' });
+        if (res.ok) loadUsers();
+        else { btn.textContent = (await res.json()).error; setTimeout(() => { btn.textContent = 'Delete'; delete btn.dataset.confirming; btn.style.background = ''; btn.style.color = ''; }, 2000); }
+        return;
+      }
+      btn.dataset.confirming = 'true';
+      btn.textContent = 'Confirm';
+      btn.style.background = 'var(--color-danger)';
+      btn.style.color = 'white';
+      setTimeout(() => { btn.textContent = 'Delete'; delete btn.dataset.confirming; btn.style.background = ''; btn.style.color = ''; }, 3000);
     }
 
     async function createUser() {

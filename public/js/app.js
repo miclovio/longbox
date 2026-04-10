@@ -2,6 +2,46 @@
    Longbox — Shared Utilities
    ============================================ */
 
+/** Show a toast notification */
+function showToast(message, opts) {
+  opts = opts || {};
+  var container = document.getElementById('toastContainer');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'toastContainer';
+    container.className = 'toast-container';
+    document.body.appendChild(container);
+  }
+  var toast = document.createElement('div');
+  toast.className = 'toast' + (opts.type ? ' toast-' + opts.type : '');
+  toast.textContent = message;
+  container.appendChild(toast);
+  var duration = opts.duration || 3000;
+  setTimeout(function() {
+    toast.classList.add('toast-out');
+    setTimeout(function() { toast.remove(); }, 250);
+  }, duration);
+}
+
+/** Trap focus within a container while it's open */
+function trapFocus(container) {
+  var focusable = container.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+  if (!focusable.length) return function() {};
+  var first = focusable[0];
+  var last = focusable[focusable.length - 1];
+  first.focus();
+  function handler(e) {
+    if (e.key !== 'Tab') return;
+    if (e.shiftKey) {
+      if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+    } else {
+      if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+    }
+  }
+  container.addEventListener('keydown', handler);
+  return function() { container.removeEventListener('keydown', handler); };
+}
+
 /** Escape HTML to prevent XSS */
 function esc(str) {
   if (!str) return '';
@@ -139,6 +179,13 @@ function issueCard(issue) {
   const readBadge = `<button class="read-toggle" data-issue-id="${issue.id}" data-is-read="${isRead ? '1' : '0'}" title="${isRead ? 'Mark as unread' : 'Mark as read'}">${isRead ? '&#10003;' : ''}</button>`;
   const markReadBtn = '';
 
+  // Per-issue reading progress bar
+  let issueProgressBar = '';
+  if (prog && prog.currentPage > 0 && !isRead && issue.page_count > 0) {
+    const pct = Math.min(100, Math.round((prog.currentPage / issue.page_count) * 100));
+    issueProgressBar = `<div class="series-progress"><div class="series-progress-fill" style="width:${pct}%"></div></div>`;
+  }
+
   // Build stacked cover images for rotation
   const coverImgs = allCovers.map((c, i) => {
     const src = thumbUrl(c.thumb);
@@ -168,6 +215,7 @@ function issueCard(issue) {
           ${readBadge}
           ${variantBadge}
           ${variantDots}
+          ${issueProgressBar}
         </div>
       </a>
       <div class="card-info">
@@ -247,12 +295,20 @@ function addSeriesToList(btn, seriesId) {
     if (!lists.length) html += '<div style="padding:0.45rem 0.75rem;color:#666;font-size:0.78rem;">No lists yet.</div>';
     pop.innerHTML = html;
 
-    // Position near the button
+    // Read layout before appending to avoid thrash
     var rect = btn.getBoundingClientRect();
-    pop.style.left = Math.min(rect.left, window.innerWidth - 200) + 'px';
-    pop.style.top = Math.max(0, rect.bottom + 4) + 'px';
-
+    // Append off-screen to measure, then position
+    pop.style.visibility = 'hidden';
     document.body.appendChild(pop);
+    var popHeight = pop.offsetHeight;
+    var left = Math.min(rect.left, window.innerWidth - 200);
+    var top = rect.bottom + 4;
+    if (top + popHeight > window.innerHeight) {
+      top = Math.max(0, rect.top - popHeight - 4);
+    }
+    pop.style.left = left + 'px';
+    pop.style.top = top + 'px';
+    pop.style.visibility = '';
 
     pop.addEventListener('click', function(e) {
       var item = e.target.closest('[data-lid]');

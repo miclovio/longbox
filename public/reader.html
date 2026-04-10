@@ -73,9 +73,14 @@
       color: var(--text-secondary);
       font-size: 1.1rem;
       cursor: pointer;
-      padding: 0.3rem;
+      padding: 0.5rem;
+      min-width: 44px;
+      min-height: 44px;
       border-radius: 4px;
       transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .reader-bar .bar-btn:hover { color: var(--accent); background: rgba(255,255,255,0.05); }
@@ -163,6 +168,15 @@
       margin-bottom: 0.5rem;
     }
 
+    .progress-track::before {
+      content: '';
+      position: absolute;
+      top: -18px;
+      bottom: -18px;
+      left: 0;
+      right: 0;
+    }
+
     .progress-fill {
       height: 100%;
       background: var(--accent);
@@ -183,8 +197,8 @@
       background: rgba(255, 255, 255, 0.08);
       border: none;
       color: var(--text-primary);
-      width: 40px;
-      height: 40px;
+      width: 44px;
+      height: 44px;
       border-radius: 50%;
       font-size: 1.2rem;
       cursor: pointer;
@@ -268,7 +282,7 @@
     .goto-overlay.visible { display: flex; }
 
     .goto-dialog {
-      background: #1a1a1a;
+      background: var(--bg-secondary);
       border-radius: 8px;
       padding: 1.5rem;
       text-align: center;
@@ -340,7 +354,7 @@
       bottom: 80px;
       left: 50%;
       transform: translateX(-50%) translateY(20px);
-      background: #27ae60;
+      background: var(--color-success);
       color: white;
       padding: 0.6rem 1.2rem;
       border-radius: 24px;
@@ -358,7 +372,7 @@
     }
 
     .bookmark-toast.error {
-      background: #e74c3c;
+      background: var(--color-danger);
     }
 
     /* ---- List Dropdown ---- */
@@ -428,13 +442,13 @@
 
   <!-- Top Bar -->
   <div class="reader-bar" id="topBar">
-    <a class="back-btn" id="backBtn" title="Back">&#8592;</a>
+    <a class="back-btn" id="backBtn" title="Back" aria-label="Back to series">&#8592;</a>
     <div class="title" id="readerTitle">Loading...</div>
     <span class="page-info" id="pageInfo"></span>
-    <button class="bar-btn" id="zoomModeBtn" title="Zoom Mode">&#8853;</button>
-    <button class="bar-btn" id="bookmarkBtn" title="Bookmark this page">&#9734;</button>
-    <button class="bar-btn" id="listBtn" title="Add to list" style="position:relative;">&#9776;</button>
-    <button class="bar-btn" id="settingsBtn" title="Settings">&#9881;</button>
+    <button class="bar-btn" id="zoomModeBtn" title="Zoom Mode" aria-label="Zoom mode">&#8853;</button>
+    <button class="bar-btn" id="bookmarkBtn" title="Bookmark this page" aria-label="Bookmark this page">&#9734;</button>
+    <button class="bar-btn" id="listBtn" title="Add to list" aria-label="Add to list" style="position:relative;">&#9776;</button>
+    <button class="bar-btn" id="settingsBtn" title="Settings" aria-label="Settings">&#9881;</button>
   </div>
 
   <!-- Page Display -->
@@ -448,7 +462,7 @@
   <div class="click-zone right" id="zoneNext"></div>
 
   <!-- Settings Panel -->
-  <div class="settings-panel" id="settingsPanel">
+  <div class="settings-panel" id="settingsPanel" role="dialog" aria-modal="true" aria-label="Reader settings">
     <div class="setting-group">
       <h4>Fit Mode</h4>
       <button class="setting-btn active" data-fit="contain">Fit to Screen</button>
@@ -476,19 +490,19 @@
       <div class="progress-fill" id="progressFill"></div>
     </div>
     <div class="bottom-controls">
-      <button class="nav-btn" id="btnFirst" title="First page">&#171;</button>
-      <button class="nav-btn" id="btnPrev" title="Previous page">&#8249;</button>
-      <div class="page-counter" id="pageCounter" title="Go to page...">1 / 1</div>
-      <button class="nav-btn" id="btnNext" title="Next page">&#8250;</button>
-      <button class="nav-btn" id="btnLast" title="Last page">&#187;</button>
+      <button class="nav-btn" id="btnFirst" title="First page" aria-label="First page">&#171;</button>
+      <button class="nav-btn" id="btnPrev" title="Previous page" aria-label="Previous page">&#8249;</button>
+      <div class="page-counter" id="pageCounter" title="Go to page..." aria-label="Go to page" role="button" tabindex="0">1 / 1</div>
+      <button class="nav-btn" id="btnNext" title="Next page" aria-label="Next page">&#8250;</button>
+      <button class="nav-btn" id="btnLast" title="Last page" aria-label="Last page">&#187;</button>
     </div>
   </div>
 
   <!-- Go To Page Dialog -->
-  <div class="goto-overlay" id="gotoOverlay">
+  <div class="goto-overlay" id="gotoOverlay" role="dialog" aria-modal="true" aria-label="Go to page">
     <div class="goto-dialog">
       <h3>Go to Page</h3>
-      <input type="number" id="gotoInput" min="1" placeholder="Page #">
+      <input type="number" id="gotoInput" min="1" placeholder="Page #" aria-label="Page number">
       <div class="hint" id="gotoHint">Press Enter to jump</div>
     </div>
   </div>
@@ -656,12 +670,18 @@
     }
 
     // ---- Navigation ----
+    let _seriesEndShown = false;
     function goNext() {
       if (currentPage < pageCount - 1) {
         loadPage(currentPage + 1);
       } else if (nextIssueId) {
-        // Finished issue — go to next
         window.location.href = `/reader.html?id=${nextIssueId}`;
+      } else if (!_seriesEndShown) {
+        _seriesEndShown = true;
+        var toast = document.getElementById('bookmarkToast');
+        toast.textContent = 'You finished ' + (issue.series_name || 'this series') + '.';
+        toast.className = 'bookmark-toast visible';
+        setTimeout(function() { toast.classList.remove('visible'); }, 4000);
       }
     }
 
@@ -710,6 +730,7 @@
       document.getElementById('topBar').classList.toggle('hidden', !uiVisible);
       document.getElementById('bottomBar').classList.toggle('hidden', !uiVisible);
       if (!uiVisible) {
+        if (window._settingsTrap) { window._settingsTrap(); window._settingsTrap = null; }
         document.getElementById('settingsPanel').classList.remove('visible');
       }
     }
@@ -719,11 +740,13 @@
       const overlay = document.getElementById('gotoOverlay');
       const input = document.getElementById('gotoInput');
       overlay.classList.add('visible');
+      window._gotoTrap = trapFocus(document.getElementById('gotoOverlay'));
       input.value = '';
       input.focus();
     }
 
     function hideGotoDialog() {
+      if (window._gotoTrap) { window._gotoTrap(); window._gotoTrap = null; }
       document.getElementById('gotoOverlay').classList.remove('visible');
     }
 
@@ -749,7 +772,14 @@
 
     // Settings
     document.getElementById('settingsBtn').addEventListener('click', () => {
-      document.getElementById('settingsPanel').classList.toggle('visible');
+      const panel = document.getElementById('settingsPanel');
+      const opening = !panel.classList.contains('visible');
+      panel.classList.toggle('visible');
+      if (opening) {
+        window._settingsTrap = trapFocus(panel);
+      } else {
+        if (window._settingsTrap) { window._settingsTrap(); window._settingsTrap = null; }
+      }
     });
 
     document.querySelectorAll('[data-fit]').forEach(btn => {
@@ -892,6 +922,7 @@
           if (document.getElementById('gotoOverlay').classList.contains('visible')) {
             hideGotoDialog();
           } else if (document.getElementById('settingsPanel').classList.contains('visible')) {
+            if (window._settingsTrap) { window._settingsTrap(); window._settingsTrap = null; }
             document.getElementById('settingsPanel').classList.remove('visible');
           } else {
             window.location.href = `/series.html?id=${issue.series_id}`;

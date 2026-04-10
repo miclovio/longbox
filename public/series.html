@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Series — Longbox</title>
   <link rel="icon" type="image/svg+xml" href="/favicon.svg">
   <link rel="icon" type="image/png" href="/favicon.png">
@@ -14,8 +14,8 @@
       position: absolute;
       bottom: 0;
       right: 0;
-      width: 32px;
-      height: 32px;
+      width: 36px;
+      height: 36px;
       border: none;
       border-radius: 8px 0 0 0;
       background: rgba(0, 0, 0, 0.5);
@@ -57,7 +57,7 @@
     .star-row .star {
       font-size: 1.4rem;
       cursor: pointer;
-      color: #555;
+      color: var(--text-disabled);
       transition: color 0.15s;
       -webkit-user-select: none;
       user-select: none;
@@ -68,7 +68,7 @@
     .star-row .star:hover { color: var(--accent); }
 
     .star-row.hovering .star.preview { color: var(--accent); }
-    .star-row.hovering .star:not(.preview) { color: #555; }
+    .star-row.hovering .star:not(.preview) { color: var(--text-disabled); }
 
     .rating-avg {
       font-size: 0.8rem;
@@ -100,10 +100,10 @@
       width: 100%;
       min-height: 80px;
       padding: 0.6rem;
-      background: #1a1a1a;
-      border: 1px solid #333;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
       border-radius: 6px;
-      color: #fff;
+      color: var(--text-primary);
       font-size: 0.85rem;
       font-family: inherit;
       resize: vertical;
@@ -177,16 +177,24 @@
       padding: 0.2rem;
     }
 
-    .review-item .rev-delete:hover { color: #e74c3c; }
+    .review-item .rev-delete:hover { color: var(--color-danger); }
+
+    @media (max-width: 768px) {
+      .add-to-list-btn { width: 44px; height: 44px; font-size: 1.3rem; }
+    }
 
     @media (max-width: 480px) {
       .star-row .star { font-size: 1.4rem; padding: 4px; }
     }
 
+    @media (hover: none) {
+      .add-to-list-btn { opacity: 0.7; }
+    }
+
     /* ---- List Popover (modern dropdown) ---- */
     .list-popover {
       position: fixed;
-      background: #1e1e1e;
+      background: var(--bg-elevated);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 12px;
       padding: 0.5rem;
@@ -264,8 +272,10 @@
 </head>
 <body>
 
+  <a href="#main-content" class="skip-link">Skip to content</a>
+
   <!-- Navbar -->
-  <header class="navbar">
+  <header class="navbar" role="banner">
     <a class="logo" href="/" onclick="sessionStorage.setItem('active_tab','library');">Long<span>box</span></a>
     <nav>
       <a href="/admin.html" id="adminLink" style="display:none;">Admin</a>
@@ -273,7 +283,7 @@
     <div class="spacer"></div>
     <div class="search-container">
       <span class="search-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></span>
-      <input type="text" id="searchInput" placeholder="Search issues..." autocomplete="off">
+      <input type="text" id="searchInput" placeholder="Search issues..." autocomplete="off" aria-label="Search issues">
     </div>
     <a href="/profile.html" class="btn-icon" id="profileLink" title="Profile" style="display:inline-flex;align-items:center;gap:0.4rem;font-size:0.85rem;text-decoration:none;color:var(--text-primary);">
       <span id="profileInitial" style="width:30px;height:30px;border-radius:50%;background:var(--accent);display:flex;align-items:center;justify-content:center;font-size:0.8rem;font-weight:700;color:white;overflow:hidden;"></span>
@@ -285,7 +295,7 @@
   <div class="status-bar" id="statusBar"></div>
 
   <!-- Main -->
-  <div class="main">
+  <main class="main" id="main-content">
     <a href="/" onclick="sessionStorage.setItem('active_tab','library');" style="text-decoration:none;display:inline-block;margin-bottom:1rem;">
       <div style="font-size:0.85rem;font-weight:600;color:var(--text-primary);">Library</div>
       <div id="breadcrumbMeta" style="font-size:0.7rem;color:var(--text-muted);"></div>
@@ -341,14 +351,14 @@
       <h2 style="font-size:1.1rem;font-weight:600;margin-bottom:1rem;">Reviews</h2>
       <div id="reviewsList"></div>
     </div>
-  </div>
+  </main>
 
   <!-- Comic Vine Match Modal -->
   <div class="modal-overlay" id="cvModal">
     <div class="modal">
       <h3>Match to Comic Vine</h3>
       <div style="display:flex;gap:0.5rem;margin-bottom:1rem;">
-        <input type="text" id="cvSearchInput" placeholder="Search Comic Vine..." style="flex:1;padding:0.6rem 1rem;border:none;border-radius:24px;background:rgba(255,255,255,0.08);color:var(--text-primary);font-size:0.9rem;outline:none;">
+        <input type="text" id="cvSearchInput" placeholder="Search Comic Vine..." aria-label="Search Comic Vine" style="flex:1;padding:0.6rem 1rem;border:none;border-radius:24px;background:rgba(255,255,255,0.08);color:var(--text-primary);font-size:0.9rem;outline:none;">
         <button class="btn btn-primary" id="cvSearchBtn">Search</button>
       </div>
       <div id="cvResults"></div>
@@ -368,6 +378,7 @@
     const seriesId = getParam('id');
     let _userLists = null;
     let _listMembership = {}; // { issueId: Set of listIds }
+    var _releaseFocusTrap = null;
 
     async function loadSeries() {
       const res = await fetch(`/api/series/${seriesId}`);
@@ -470,12 +481,13 @@
 
     document.getElementById('btnMatchCV').onclick = () => {
       cvModal.classList.add('visible');
+      _releaseFocusTrap = trapFocus(document.querySelector('.modal'));
       document.getElementById('cvSearchInput').value = series.name;
       searchComicVine();
     };
 
-    document.getElementById('cvCloseBtn').onclick = () => cvModal.classList.remove('visible');
-    cvModal.addEventListener('click', (e) => { if (e.target === cvModal) cvModal.classList.remove('visible'); });
+    document.getElementById('cvCloseBtn').onclick = () => { if (_releaseFocusTrap) { _releaseFocusTrap(); _releaseFocusTrap = null; } cvModal.classList.remove('visible'); };
+    cvModal.addEventListener('click', (e) => { if (e.target === cvModal) { if (_releaseFocusTrap) { _releaseFocusTrap(); _releaseFocusTrap = null; } cvModal.classList.remove('visible'); } });
 
     document.getElementById('cvSearchBtn').onclick = searchComicVine;
     document.getElementById('cvSearchInput').addEventListener('keydown', (e) => {
@@ -537,6 +549,7 @@
           return;
         }
 
+        if (_releaseFocusTrap) { _releaseFocusTrap(); _releaseFocusTrap = null; }
         cvModal.classList.remove('visible');
         loadSeries(); // Reload with new metadata
       } catch (err) {
@@ -553,7 +566,7 @@
         }
       } catch (err) {
         // Silent fail — auto-match is best-effort
-        console.log('Auto-match failed:', err.message);
+        // Auto-match is best-effort, no action needed on failure
       }
     }
 
@@ -583,8 +596,28 @@
         }
         _progressData.issues[issueId].isRead = newState;
 
-        // Re-render the grid to update badges
-        renderIssues();
+        // Update the clicked card in-place (no full grid re-render)
+        btn.dataset.isRead = newState ? '1' : '0';
+        btn.title = newState ? 'Mark as unread' : 'Mark as read';
+        var card = btn.closest('.card');
+        if (card) {
+          card.classList.toggle('is-read', newState);
+        }
+        if (newState) {
+          btn.classList.add('just-read');
+          setTimeout(function() { btn.classList.remove('just-read'); }, 300);
+        }
+
+        // Celebrate series completion
+        if (newState && issues.length > 0) {
+          var allRead = issues.every(function(iss) {
+            var p = getIssueProgress(iss.id);
+            return p && p.isRead;
+          });
+          if (allRead) {
+            showToast('You finished ' + (series.name || 'this series') + '!', { type: 'accent', duration: 4000 });
+          }
+        }
       } catch (err) {
         console.error('Failed to toggle read status:', err);
       }
@@ -876,6 +909,7 @@
       if (res.ok) {
         closeReviewForm();
         loadRatings();
+        showToast('Rating saved', { type: 'success' });
       }
     }
 
@@ -962,6 +996,17 @@
       const saved = sessionStorage.getItem('series_scroll_' + seriesId);
       if (saved) {
         requestAnimationFrame(() => window.scrollTo(0, parseInt(saved, 10)));
+      }
+
+      // Show completion toast if user just finished reading (came back from reader)
+      if (issues.length > 0 && document.referrer.includes('/reader.html')) {
+        var allRead = issues.every(function(iss) {
+          var p = getIssueProgress(iss.id);
+          return p && p.isRead;
+        });
+        if (allRead) {
+          showToast('You finished ' + (series.name || 'this series') + '!', { type: 'accent', duration: 4000 });
+        }
       }
     }
 
