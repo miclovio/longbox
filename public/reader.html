@@ -625,6 +625,10 @@
         loading.style.display = 'none';
         applyFitMode();
       };
+      img.onerror = () => {
+        loading.style.display = 'none';
+        showToast('Couldn\'t load page ' + (page + 1) + '. The archive may be corrupt or unsupported.', true);
+      };
       img.src = url;
       imageCache.set(page, img);
 
